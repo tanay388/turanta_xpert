@@ -10,6 +10,15 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 typedef FcmTokenRegistrar = Future<void> Function(String token);
 typedef NotificationOpenHandler = void Function(String? hyperLink);
 
+/// A job-lifecycle push (`job_assigned`, `job_started`, `job_extended`,
+/// `job_ending_soon`, `job_overdue`, `job_completed`, …) — the `event` +
+/// `bookingId` tags the backend already sets in the FCM `data` payload.
+class JobLifecycleEvent {
+  const JobLifecycleEvent({required this.event, this.bookingId});
+  final String event;
+  final String? bookingId;
+}
+
 /// Requests permission, obtains the FCM token, registers it with the backend,
 /// and shows foreground notifications on Android.
 class PushNotificationService {
@@ -23,12 +32,18 @@ class PushNotificationService {
 
   final _messaging = FirebaseMessaging.instance;
   final _local = FlutterLocalNotificationsPlugin();
+  final _jobLifecycle = StreamController<JobLifecycleEvent>.broadcast();
 
   StreamSubscription<String>? _tokenSub;
   StreamSubscription<RemoteMessage>? _foregroundSub;
   StreamSubscription<RemoteMessage>? _openedSub;
   bool _initialized = false;
   String? _lastRegisteredToken;
+
+  /// Emits whenever a job-lifecycle push arrives (foreground or tapped-open),
+  /// so an open job screen can refresh immediately instead of waiting on its
+  /// fallback poll.
+  Stream<JobLifecycleEvent> get jobLifecycleEvents => _jobLifecycle.stream;
 
   static const _androidChannel = AndroidNotificationChannel(
     'turanta_xpert_default',
@@ -116,6 +131,7 @@ class PushNotificationService {
     await _tokenSub?.cancel();
     await _foregroundSub?.cancel();
     await _openedSub?.cancel();
+    await _jobLifecycle.close();
   }
 
   Future<void> _requestPermission() async {
@@ -168,10 +184,25 @@ class PushNotificationService {
     }
   }
 
+  void _emitJobLifecycle(RemoteMessage message) {
+    final event = message.data['event']?.toString();
+    if (event == null || event.isEmpty) return;
+    if (_jobLifecycle.isClosed) return;
+    _jobLifecycle.add(
+      JobLifecycleEvent(
+        event: event,
+        bookingId: message.data['bookingId']?.toString(),
+      ),
+    );
+  }
+
   Future<void> _onForegroundMessage(RemoteMessage message) async {
     debugPrint(
-      '[FCM][fg] id=${message.messageId} title=${message.notification?.title}',
+      '[FCM][fg] id=${message.messageId} title=${message.notification?.title} '
+      'event=${message.data['event']}',
     );
+
+    _emitJobLifecycle(message);
 
     final notification = message.notification;
     if (notification == null) return;
@@ -205,6 +236,7 @@ class PushNotificationService {
     debugPrint(
       '[FCM][open] id=${message.messageId} data=${message.data}',
     );
+    _emitJobLifecycle(message);
     final link = message.data['hyperLink']?.toString();
     if (link != null && link.isNotEmpty) {
       onOpenedLink?.call(link);

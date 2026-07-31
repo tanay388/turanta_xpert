@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/i18n/context_t.dart';
+import '../../../core/notifications/push_notification_service.dart';
+import '../../../core/notifications/push_providers.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../data/jobs_api.dart';
 import 'jobs_controller.dart';
@@ -22,11 +26,43 @@ class JobDetailScreen extends ConsumerStatefulWidget {
 class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   final _otpCtrl = TextEditingController();
   bool _busy = false;
+  Timer? _pollTimer;
+  StreamSubscription<JobLifecycleEvent>? _lifecycleSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Primary refresh path: a job-lifecycle push (e.g. the customer extended
+    // the job) refetches immediately. The poll timer below is just a
+    // fallback in case a push is missed.
+    _lifecycleSub = ref
+        .read(pushNotificationServiceProvider)
+        .jobLifecycleEvents
+        .listen((event) {
+      if (event.bookingId != widget.jobId.toString()) return;
+      ref.invalidate(partnerJobProvider(widget.jobId));
+    });
+  }
 
   @override
   void dispose() {
     _otpCtrl.dispose();
+    _pollTimer?.cancel();
+    _lifecycleSub?.cancel();
     super.dispose();
+  }
+
+  /// Fallback safety net for a missed push — a job-lifecycle event (above)
+  /// is the primary refresh trigger while this screen is open.
+  void _ensurePolling(bool inProgress) {
+    if (inProgress) {
+      _pollTimer ??= Timer.periodic(const Duration(minutes: 5), (_) {
+        ref.invalidate(partnerJobProvider(widget.jobId));
+      });
+    } else {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
   }
 
   Future<void> _submit(PartnerJob job) async {
@@ -102,6 +138,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncJob = ref.watch(partnerJobProvider(widget.jobId));
+    ref.listen(partnerJobProvider(widget.jobId), (_, next) {
+      _ensurePolling(next.valueOrNull?.isInProgress ?? false);
+    });
 
     return Scaffold(
       backgroundColor: XpertColors.background,
@@ -138,11 +177,12 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                     label: ref.t('jobs.duration'),
                     value: '$hours hr',
                   ),
-                  if ((job.isCompleted || job.isNoShow) &&
-                      job.partnerEarning != null)
+                  if (job.partnerEarning != null)
                     _InfoRow(
                       icon: Icons.account_balance_wallet_outlined,
-                      label: ref.t('jobs.earning.label'),
+                      label: (job.isCompleted || job.isNoShow)
+                          ? ref.t('jobs.earning.label')
+                          : ref.t('jobs.earning.estimated_label'),
                       value: job.partnerEarning! <= 0
                           ? '—'
                           : '₹${job.partnerEarning!.toStringAsFixed(0)}',

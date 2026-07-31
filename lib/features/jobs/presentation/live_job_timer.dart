@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
@@ -63,6 +64,12 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
     final elapsed = jobTimeElapsed(started, now);
     final overtime = jobIsOvertime(end, now);
     final accent = overtime ? XpertColors.danger : XpertColors.primary;
+    final progress = overtime
+        ? 1.0
+        : (duration.inSeconds > 0
+            ? (elapsed.inSeconds / duration.inSeconds).clamp(0.0, 1.0)
+            : 0.0);
+    final timeFmt = DateFormat('h:mm a');
 
     if (widget.compact) {
       return Row(
@@ -118,10 +125,31 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
                 : ref.t('jobs.live.remaining_label'),
             style: XpertTypography.caption.copyWith(color: XpertColors.muted),
           ),
-          const SizedBox(height: 4),
-          Text(
-            ref.t('jobs.live.elapsed', {'time': formatJobClock(elapsed)}),
-            style: XpertTypography.caption.copyWith(color: XpertColors.muted),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(XpertRadius.pill),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: accent.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${ref.t('jobs.live.started')} ${timeFmt.format(started)}',
+                style:
+                    XpertTypography.caption.copyWith(color: XpertColors.muted),
+              ),
+              Text(
+                '${ref.t('jobs.live.ends')} ${timeFmt.format(end)}',
+                style:
+                    XpertTypography.caption.copyWith(color: XpertColors.muted),
+              ),
+            ],
           ),
         ],
       ),
