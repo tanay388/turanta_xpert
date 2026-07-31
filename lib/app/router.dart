@@ -20,6 +20,7 @@ import '../features/paisa/presentation/payout_detail_screen.dart';
 import '../features/profile/presentation/edit_profile_screen.dart';
 import '../features/profile/presentation/financial_details_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/referral/presentation/referral_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/target/presentation/target_screen.dart';
 import 'shell/xpert_shell_scaffold.dart';
@@ -44,6 +45,7 @@ class _Routes {
   static const profileFinancial = '/profile/financial';
   static const settings = '/settings';
   static const hub = '/hub';
+  static const referral = '/referral';
 
   static const Set<String> unauthenticated = {login, otp};
 }
@@ -165,6 +167,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _Routes.hub,
         builder: (_, _) => const HubScreen(),
+      ),
+      GoRoute(
+        path: _Routes.referral,
+        builder: (_, _) => const ReferralScreen(),
       ),
     ],
     redirect: (context, state) {

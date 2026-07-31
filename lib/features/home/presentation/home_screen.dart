@@ -263,7 +263,7 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// Refer & earn entry point. Routes to a placeholder until roadmap plan 08.
+/// Refer & earn entry point (roadmap plan 08).
 class _ReferCard extends ConsumerWidget {
   const _ReferCard();
 
@@ -274,9 +274,7 @@ class _ReferCard extends ConsumerWidget {
       borderRadius: BorderRadius.circular(XpertRadius.md),
       child: InkWell(
         borderRadius: BorderRadius.circular(XpertRadius.md),
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ref.t('common.coming_soon'))),
-        ),
+        onTap: () => context.push('/referral'),
         child: Padding(
           padding: const EdgeInsets.all(XpertSpacing.md),
           child: Row(
