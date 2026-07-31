@@ -27,6 +27,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   static const _genders = ['Male', 'Female', 'Prefer not to say'];
 
+  static const _genderKeys = {
+    'Male': 'profile.gender.male',
+    'Female': 'profile.gender.female',
+    'Prefer not to say': 'profile.gender.prefer_not_to_say',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -172,7 +178,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 .map(
                   (g) => DropdownMenuItem(
                     value: g,
-                    child: Text(g, style: XpertTypography.body),
+                    child: Text(
+                      ref.t(_genderKeys[g] ?? g),
+                      style: XpertTypography.body,
+                    ),
                   ),
                 )
                 .toList(),

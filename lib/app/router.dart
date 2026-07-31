@@ -15,6 +15,7 @@ import '../features/jobs/presentation/jobs_screen.dart';
 import '../features/kyc/presentation/kyc_wizard_screen.dart';
 import '../features/language/presentation/language_selection_screen.dart';
 import '../features/leave/presentation/leave_screen.dart';
+import '../features/legal/presentation/pdf_viewer_screen.dart';
 import '../features/paisa/presentation/paisa_screen.dart';
 import '../features/paisa/presentation/payout_detail_screen.dart';
 import '../features/profile/presentation/edit_profile_screen.dart';
@@ -44,6 +45,7 @@ class _Routes {
   static const profileEdit = '/profile/edit';
   static const profileFinancial = '/profile/financial';
   static const settings = '/settings';
+  static const legalDocument = '/legal-document';
   static const hub = '/hub';
   static const referral = '/referral';
 
@@ -163,6 +165,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _Routes.settings,
         builder: (_, _) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: _Routes.legalDocument,
+        builder: (_, state) {
+          final extra = state.extra as (String title, String url);
+          return PdfViewerScreen(title: extra.$1, url: extra.$2);
+        },
       ),
       GoRoute(
         path: _Routes.hub,

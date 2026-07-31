@@ -34,7 +34,7 @@ class TargetScreen extends ConsumerWidget {
               const SizedBox(height: XpertSpacing.lg),
               Text(ref.t('target.ladder.title'), style: XpertTypography.label),
               const SizedBox(height: XpertSpacing.sm),
-              _RateLadder(ladder: p.ladder),
+              _RateLadder(ladder: p.ladder, nextBand: p.nextBand),
               const SizedBox(height: XpertSpacing.lg),
               Text(ref.t('target.metrics.title'),
                   style: XpertTypography.label),
@@ -125,8 +125,9 @@ class _RatingHeader extends ConsumerWidget {
 }
 
 class _RateLadder extends ConsumerWidget {
-  const _RateLadder({required this.ladder});
+  const _RateLadder({required this.ladder, this.nextBand});
   final List<RateLadderBand> ladder;
+  final RateLadderBand? nextBand;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -143,7 +144,10 @@ class _RateLadder extends ConsumerWidget {
           for (var i = 0; i < ladder.length; i++) ...[
             if (i > 0)
               const Divider(height: 1, color: XpertColors.background),
-            _LadderRow(band: ladder[i]),
+            _LadderRow(
+              band: ladder[i],
+              isNext: identical(ladder[i], nextBand),
+            ),
           ],
         ],
       ),
@@ -152,8 +156,9 @@ class _RateLadder extends ConsumerWidget {
 }
 
 class _LadderRow extends ConsumerWidget {
-  const _LadderRow({required this.band});
+  const _LadderRow({required this.band, this.isNext = false});
   final RateLadderBand band;
+  final bool isNext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -168,6 +173,9 @@ class _LadderRow extends ConsumerWidget {
             ? XpertColors.primary.withValues(alpha: 0.08)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(XpertRadius.md),
+        border: isNext
+            ? Border.all(color: XpertColors.primary.withValues(alpha: 0.4))
+            : null,
       ),
       child: Row(
         children: [
@@ -214,6 +222,25 @@ class _LadderRow extends ConsumerWidget {
               ),
               child: Text(
                 ref.t('target.rate_band.you'),
+                style: XpertTypography.caption.copyWith(
+                  color: XpertColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ] else if (isNext) ...[
+            const SizedBox(width: XpertSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(XpertRadius.pill),
+                border: Border.all(
+                  color: XpertColors.primary.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Text(
+                ref.t('target.rate_band.next'),
                 style: XpertTypography.caption.copyWith(
                   color: XpertColors.primary,
                   fontWeight: FontWeight.w700,

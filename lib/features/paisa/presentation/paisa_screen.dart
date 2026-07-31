@@ -93,7 +93,8 @@ class _CurrentCycleCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    final cycleId = summary.currentCycleId;
+    final card = Container(
       padding: const EdgeInsets.all(XpertSpacing.lg),
       decoration: BoxDecoration(
         color: XpertColors.surface,
@@ -107,7 +108,18 @@ class _CurrentCycleCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(ref.t('paisa.current_cycle'), style: XpertTypography.caption),
-              PayoutStatusChip(status: summary.status),
+              Row(
+                children: [
+                  PayoutStatusChip(status: summary.status),
+                  if (cycleId != null) ...[
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: XpertColors.muted,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
           const SizedBox(height: XpertSpacing.xs),
@@ -152,6 +164,18 @@ class _CurrentCycleCard extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+
+    if (cycleId == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(XpertRadius.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(XpertRadius.lg),
+        onTap: () => context.push('/paisa/cycles/$cycleId'),
+        child: card,
       ),
     );
   }

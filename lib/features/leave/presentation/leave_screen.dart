@@ -166,7 +166,7 @@ class _LeaveScreenState extends ConsumerState<LeaveScreen> {
     ScaffoldMessenger.of(this.context).showSnackBar(
       SnackBar(
         content: Text(
-          success ? ref.t('leave.cancelled_ok') : (err ?? 'Error'),
+          success ? ref.t('leave.cancelled_ok') : (err ?? ref.t('common.error_generic')),
         ),
       ),
     );

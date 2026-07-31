@@ -156,7 +156,7 @@ class PushNotificationService {
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosInit = DarwinInitializationSettings();
       await _local.initialize(
-        const InitializationSettings(android: androidInit, iOS: iosInit),
+        settings: const InitializationSettings(android: androidInit, iOS: iosInit),
       );
 
       if (!kIsWeb && Platform.isAndroid) {
@@ -212,10 +212,10 @@ class PushNotificationService {
 
     try {
       await _local.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
+        id: notification.hashCode,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _androidChannel.id,
             _androidChannel.name,

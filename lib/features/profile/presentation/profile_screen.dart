@@ -13,7 +13,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authProvider).valueOrNull;
     final profile = session?.profile;
-    final name = profile?.displayName ?? 'Partner';
+    final name = profile?.displayName ?? ref.t('home.default_name');
     final phone = profile?.phone ?? session?.phone ?? '—';
     final photo = profile?.photo;
     final shift = profile?.shift;

@@ -57,7 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final jobsState = ref.watch(jobsProvider);
     final nextJob = jobsState.nextJob;
     final activeJobs = jobsState.jobs.length;
-    final displayName = session?.profile?.displayName ?? 'Partner';
+    final displayName = session?.profile?.displayName ?? ref.t('home.default_name');
 
     final shift = attendance.currentShift?.shift;
 
@@ -546,7 +546,7 @@ class _AvailabilityCard extends ConsumerWidget {
         );
     if (!context.mounted) return;
     if (blocked != null) {
-      final msg = ref.read(attendanceProvider).error ?? 'Checkout failed';
+      final msg = ref.read(attendanceProvider).error ?? ref.t('home.checkout_failed');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
@@ -934,24 +934,28 @@ class _BreakControlState extends ConsumerState<_BreakControl> {
   }
 }
 
-class _EarlyCheckoutSheet extends StatefulWidget {
+class _EarlyCheckoutSheet extends ConsumerStatefulWidget {
   const _EarlyCheckoutSheet();
 
   @override
-  State<_EarlyCheckoutSheet> createState() => _EarlyCheckoutSheetState();
+  ConsumerState<_EarlyCheckoutSheet> createState() =>
+      _EarlyCheckoutSheetState();
 }
 
-class _EarlyCheckoutSheetState extends State<_EarlyCheckoutSheet> {
+class _EarlyCheckoutSheetState extends ConsumerState<_EarlyCheckoutSheet> {
   String _code = 'PERSONAL_EMERGENCY';
   final _text = TextEditingController();
 
-  static const _reasons = {
-    'MEDICAL': 'Medical',
-    'FAMILY_EMERGENCY': 'Family emergency',
-    'FEELING_UNWELL': 'Feeling unwell',
-    'PERSONAL_EMERGENCY': 'Personal emergency',
-    'OTHER': 'Other',
-  };
+  static const _reasonCodes = [
+    'MEDICAL',
+    'FAMILY_EMERGENCY',
+    'FEELING_UNWELL',
+    'PERSONAL_EMERGENCY',
+    'OTHER',
+  ];
+
+  String _reasonLabel(String code) =>
+      ref.t('home.checkout_reason.${code.toLowerCase()}');
 
   @override
   void dispose() {
@@ -972,12 +976,18 @@ class _EarlyCheckoutSheetState extends State<_EarlyCheckoutSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Early checkout reason', style: XpertTypography.title.copyWith(fontSize: 20)),
+          Text(
+            ref.t('home.checkout_reason.title'),
+            style: XpertTypography.title.copyWith(fontSize: 20),
+          ),
           const SizedBox(height: XpertSpacing.md),
           DropdownButtonFormField<String>(
             initialValue: _code,
-            items: _reasons.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+            items: _reasonCodes
+                .map((code) => DropdownMenuItem(
+                      value: code,
+                      child: Text(_reasonLabel(code)),
+                    ))
                 .toList(),
             onChanged: (v) => setState(() => _code = v ?? _code),
           ),
@@ -985,7 +995,9 @@ class _EarlyCheckoutSheetState extends State<_EarlyCheckoutSheet> {
             const SizedBox(height: XpertSpacing.sm),
             TextField(
               controller: _text,
-              decoration: const InputDecoration(hintText: 'Please describe'),
+              decoration: InputDecoration(
+                hintText: ref.t('home.checkout_reason.other_hint'),
+              ),
               maxLines: 2,
             ),
           ],
@@ -998,7 +1010,7 @@ class _EarlyCheckoutSheetState extends State<_EarlyCheckoutSheet> {
                 'text': _text.text.trim(),
               });
             },
-            child: const Text('Confirm checkout'),
+            child: Text(ref.t('home.checkout_reason.confirm_cta')),
           ),
         ],
       ),

@@ -44,6 +44,7 @@ class RateBand {
 /// Top-of-tab summary: current cycle total + rate band + rating.
 class EarningSummary {
   const EarningSummary({
+    this.currentCycleId,
     this.periodStart,
     this.periodEnd,
     this.totalAmount = 0,
@@ -53,6 +54,9 @@ class EarningSummary {
     this.rating,
   });
 
+  /// Null until the partner's first job earning of the fortnight lands —
+  /// no `PayoutCycle` row exists yet, so there's nothing to open.
+  final int? currentCycleId;
   final DateTime? periodStart;
   final DateTime? periodEnd;
   final double totalAmount;
@@ -65,6 +69,7 @@ class EarningSummary {
     final cycle = json['currentCycle'] as Map<String, dynamic>? ?? const {};
     final bandJson = json['band'];
     return EarningSummary(
+      currentCycleId: (cycle['id'] as num?)?.toInt(),
       periodStart: _parseServerDate(cycle['periodStart']),
       periodEnd: _parseServerDate(cycle['periodEnd']),
       totalAmount: (cycle['totalAmount'] as num?)?.toDouble() ?? 0,

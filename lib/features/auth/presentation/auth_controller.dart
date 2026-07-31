@@ -8,6 +8,12 @@ import '../../../core/models/partner_user.dart';
 import '../../../core/notifications/push_providers.dart';
 import '../data/partner_auth_api.dart';
 
+/// Set when the user enters a friend's code on the login screen; consumed
+/// once by [AuthController._resolve] on the next profile bootstrap (the
+/// backend only applies it for a brand-new partner signup) and cleared
+/// after.
+final pendingReferralCodeProvider = StateProvider<String?>((ref) => null);
+
 class Session {
   const Session({
     required this.firebaseUser,
@@ -98,7 +104,12 @@ class AuthController extends AsyncNotifier<Session?> {
   Future<Session> _resolve(fb.User user) async {
     final api = ref.read(partnerAuthApiProvider);
     try {
-      final profile = await api.getMe();
+      final referralCode = ref.read(pendingReferralCodeProvider);
+      final profile = await api.getMe(referralCode: referralCode);
+      // One-shot: only meant for this signup's first bootstrap call.
+      if (referralCode != null) {
+        ref.read(pendingReferralCodeProvider.notifier).state = null;
+      }
       await ref
           .read(localeProvider.notifier)
           .syncFromProfile(profile.language);

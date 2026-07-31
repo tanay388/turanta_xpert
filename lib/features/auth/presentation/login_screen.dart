@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
+import 'auth_controller.dart';
 import 'otp_controller.dart';
 
 class LoginScreen extends HookConsumerWidget {
@@ -19,6 +20,7 @@ class LoginScreen extends HookConsumerWidget {
     final phone = useTextEditingController();
     final phoneFocus = useFocusNode();
     final phoneError = useState<String?>(null);
+    final referralCode = useTextEditingController();
     final isBusy = state is OtpSending;
 
     useEffect(() {
@@ -42,6 +44,9 @@ class LoginScreen extends HookConsumerWidget {
         return;
       }
       phoneError.value = null;
+      final code = referralCode.text.trim();
+      ref.read(pendingReferralCodeProvider.notifier).state =
+          code.isEmpty ? null : code;
       final normalized = raw.startsWith('+') ? raw : '+91$raw';
       await controller.sendOtp(normalized);
     }
@@ -103,6 +108,17 @@ class LoginScreen extends HookConsumerWidget {
                     ),
                   ),
                   prefixIconConstraints: const BoxConstraints(minWidth: 0),
+                ),
+              ),
+              const SizedBox(height: XpertSpacing.md),
+              TextField(
+                controller: referralCode,
+                enabled: !isBusy,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => sendCode(),
+                decoration: InputDecoration(
+                  labelText: ref.t('login.referral.label'),
                 ),
               ),
               const SizedBox(height: XpertSpacing.xl),

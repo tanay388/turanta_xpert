@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/i18n/context_t.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
@@ -35,13 +36,13 @@ class KycWizardScreen extends HookConsumerWidget {
     final holderName = useTextEditingController();
     final uan = useTextEditingController();
 
-    final steps = const [
-      'Personal',
-      'Aadhaar',
-      'PAN',
-      'Selfie',
-      'Bank',
-      'Review',
+    final steps = [
+      ref.t('kyc.step.personal'),
+      ref.t('kyc.step.aadhaar'),
+      ref.t('kyc.step.pan'),
+      ref.t('kyc.step.selfie'),
+      ref.t('kyc.step.bank'),
+      ref.t('kyc.step.review'),
     ];
 
     Future<String?> pickAndUpload(ValueNotifier<String?> target) async {
@@ -54,12 +55,12 @@ class KycWizardScreen extends HookConsumerWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
+                title: Text(ref.t('kyc.picker.camera')),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
+                title: Text(ref.t('kyc.picker.gallery')),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
             ],
@@ -94,12 +95,12 @@ class KycWizardScreen extends HookConsumerWidget {
       switch (step.value) {
         case 0:
           if (fullName.text.trim().length < 2) {
-            error.value = 'Enter your full name';
+            error.value = ref.t('kyc.error.name_required');
             return false;
           }
           final birth = dob.value;
           if (birth == null) {
-            error.value = 'Select date of birth';
+            error.value = ref.t('kyc.error.dob_required');
             return false;
           }
           final now = DateTime.now();
@@ -109,33 +110,33 @@ class KycWizardScreen extends HookConsumerWidget {
             age -= 1;
           }
           if (age < 18) {
-            error.value = 'You must be at least 18 years old';
+            error.value = ref.t('kyc.error.min_age');
             return false;
           }
           return true;
         case 1:
           if (aadhaarFront.value == null || aadhaarBack.value == null) {
-            error.value = 'Upload Aadhaar front and back';
+            error.value = ref.t('kyc.error.aadhaar_photos_required');
             return false;
           }
           if (aadhaarNumber.text.replaceAll(RegExp(r'\s+'), '').length != 12) {
-            error.value = 'Enter a valid 12-digit Aadhaar number';
+            error.value = ref.t('kyc.error.aadhaar_invalid');
             return false;
           }
           return true;
         case 2:
           if (panFront.value == null || panBack.value == null) {
-            error.value = 'Upload PAN front and back';
+            error.value = ref.t('kyc.error.pan_photos_required');
             return false;
           }
           if (panNumber.text.trim().length != 10) {
-            error.value = 'Enter a valid 10-character PAN';
+            error.value = ref.t('kyc.error.pan_invalid');
             return false;
           }
           return true;
         case 3:
           if (selfie.value == null) {
-            error.value = 'Upload a clear selfie';
+            error.value = ref.t('kyc.error.selfie_required');
             return false;
           }
           return true;
@@ -143,23 +144,23 @@ class KycWizardScreen extends HookConsumerWidget {
           final acc = account.text.trim();
           final confirm = accountConfirm.text.trim();
           if (acc.length < 8) {
-            error.value = 'Enter a valid account number';
+            error.value = ref.t('kyc.error.account_invalid');
             return false;
           }
           if (acc != confirm) {
-            error.value = 'Account numbers do not match';
+            error.value = ref.t('kyc.error.account_mismatch');
             return false;
           }
           if (ifsc.text.trim().length < 8) {
-            error.value = 'Enter a valid IFSC';
+            error.value = ref.t('kyc.error.ifsc_invalid');
             return false;
           }
           if (bankName.text.trim().isEmpty) {
-            error.value = 'Enter bank name';
+            error.value = ref.t('kyc.error.bank_name_required');
             return false;
           }
           if (holderName.text.trim().isEmpty) {
-            error.value = 'Enter account holder name';
+            error.value = ref.t('kyc.error.holder_name_required');
             return false;
           }
           return true;
@@ -217,7 +218,7 @@ class KycWizardScreen extends HookConsumerWidget {
         contentPadding: EdgeInsets.zero,
         title: Text(label, style: XpertTypography.label),
         subtitle: Text(
-          has ? 'Uploaded' : 'Tap to upload',
+          has ? ref.t('kyc.status.uploaded') : ref.t('kyc.doc.tap_to_upload'),
           style: XpertTypography.caption.copyWith(
             color: has ? XpertColors.success : XpertColors.muted,
           ),
@@ -239,7 +240,7 @@ class KycWizardScreen extends HookConsumerWidget {
               TextField(
                 controller: fullName,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Full name'),
+                decoration: InputDecoration(labelText: ref.t('kyc.field.full_name')),
               ),
               const SizedBox(height: XpertSpacing.md),
               OutlinedButton(
@@ -254,8 +255,10 @@ class KycWizardScreen extends HookConsumerWidget {
                 },
                 child: Text(
                   dob.value == null
-                      ? 'Select date of birth'
-                      : 'DOB: ${DateFormat('dd MMM yyyy').format(dob.value!)}',
+                      ? ref.t('kyc.field.select_dob')
+                      : ref.t('kyc.field.dob_value', {
+                          'date': DateFormat('dd MMM yyyy').format(dob.value!),
+                        }),
                 ),
               ),
             ],
@@ -263,15 +266,15 @@ class KycWizardScreen extends HookConsumerWidget {
         case 1:
           return Column(
             children: [
-              docTile(label: 'Aadhaar front', url: aadhaarFront),
-              docTile(label: 'Aadhaar back', url: aadhaarBack),
+              docTile(label: ref.t('kyc.doc.aadhaar_front'), url: aadhaarFront),
+              docTile(label: ref.t('kyc.doc.aadhaar_back'), url: aadhaarBack),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: aadhaarNumber,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Aadhaar number',
-                  hintText: '12-digit number',
+                decoration: InputDecoration(
+                  labelText: ref.t('kyc.field.aadhaar_number'),
+                  hintText: ref.t('kyc.field.aadhaar_hint'),
                 ),
               ),
             ],
@@ -279,15 +282,15 @@ class KycWizardScreen extends HookConsumerWidget {
         case 2:
           return Column(
             children: [
-              docTile(label: 'PAN front', url: panFront),
-              docTile(label: 'PAN back', url: panBack),
+              docTile(label: ref.t('kyc.doc.pan_front'), url: panFront),
+              docTile(label: ref.t('kyc.doc.pan_back'), url: panBack),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: panNumber,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'PAN number',
-                  hintText: 'ABCDE1234F',
+                decoration: InputDecoration(
+                  labelText: ref.t('kyc.field.pan_number'),
+                  hintText: ref.t('kyc.field.pan_hint'),
                 ),
               ),
             ],
@@ -295,7 +298,7 @@ class KycWizardScreen extends HookConsumerWidget {
         case 3:
           return Column(
             children: [
-              docTile(label: 'Clear selfie', url: selfie),
+              docTile(label: ref.t('kyc.doc.selfie'), url: selfie),
               if (selfie.value != null)
                 Padding(
                   padding: const EdgeInsets.only(top: XpertSpacing.md),
@@ -317,43 +320,45 @@ class KycWizardScreen extends HookConsumerWidget {
               TextField(
                 controller: account,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Account number'),
+                decoration:
+                    InputDecoration(labelText: ref.t('kyc.field.account_number')),
               ),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: accountConfirm,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Re-enter account number',
+                decoration: InputDecoration(
+                  labelText: ref.t('kyc.field.account_number_confirm'),
                 ),
               ),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: ifsc,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'IFSC'),
+                decoration: InputDecoration(labelText: ref.t('kyc.field.ifsc')),
               ),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: bankName,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Bank name'),
+                decoration:
+                    InputDecoration(labelText: ref.t('kyc.field.bank_name')),
               ),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: holderName,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Account holder name',
+                decoration: InputDecoration(
+                  labelText: ref.t('kyc.field.holder_name'),
                 ),
               ),
               const SizedBox(height: XpertSpacing.md),
               TextField(
                 controller: uan,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'UAN (optional)',
-                  hintText: 'EPFO Universal Account Number',
+                decoration: InputDecoration(
+                  labelText: ref.t('kyc.field.uan'),
+                  hintText: ref.t('kyc.field.uan_hint'),
                 ),
               ),
             ],
@@ -362,38 +367,60 @@ class KycWizardScreen extends HookConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Name: ${fullName.text.trim()}', style: XpertTypography.body),
               Text(
-                'DOB: ${dob.value == null ? '—' : DateFormat('dd MMM yyyy').format(dob.value!)}',
+                ref.t('kyc.review.name', {'value': fullName.text.trim()}),
                 style: XpertTypography.body,
               ),
               Text(
-                'Aadhaar: ${aadhaarFront.value != null && aadhaarBack.value != null ? 'Uploaded' : 'Missing'}',
+                ref.t('kyc.review.dob', {
+                  'value': dob.value == null
+                      ? '—'
+                      : DateFormat('dd MMM yyyy').format(dob.value!),
+                }),
                 style: XpertTypography.body,
               ),
               Text(
-                'PAN: ${panFront.value != null && panBack.value != null ? 'Uploaded' : 'Missing'}',
+                ref.t('kyc.review.aadhaar', {
+                  'status': aadhaarFront.value != null && aadhaarBack.value != null
+                      ? ref.t('kyc.status.uploaded')
+                      : ref.t('kyc.status.missing'),
+                }),
                 style: XpertTypography.body,
               ),
               Text(
-                'Selfie: ${selfie.value != null ? 'Uploaded' : 'Missing'}',
+                ref.t('kyc.review.pan', {
+                  'status': panFront.value != null && panBack.value != null
+                      ? ref.t('kyc.status.uploaded')
+                      : ref.t('kyc.status.missing'),
+                }),
                 style: XpertTypography.body,
               ),
               Text(
-                'Bank: ${bankName.text.trim()} · ${ifsc.text.trim().toUpperCase()}',
+                ref.t('kyc.review.selfie', {
+                  'status': selfie.value != null
+                      ? ref.t('kyc.status.uploaded')
+                      : ref.t('kyc.status.missing'),
+                }),
                 style: XpertTypography.body,
               ),
               Text(
-                'Account: ${account.text.trim()}',
+                ref.t('kyc.review.bank', {
+                  'bankName': bankName.text.trim(),
+                  'ifsc': ifsc.text.trim().toUpperCase(),
+                }),
                 style: XpertTypography.body,
               ),
               Text(
-                'Holder: ${holderName.text.trim()}',
+                ref.t('kyc.review.account', {'value': account.text.trim()}),
+                style: XpertTypography.body,
+              ),
+              Text(
+                ref.t('kyc.review.holder', {'value': holderName.text.trim()}),
                 style: XpertTypography.body,
               ),
               const SizedBox(height: XpertSpacing.md),
               Text(
-                'Submit for Turanta ops review. You cannot edit after submit.',
+                ref.t('kyc.review.disclaimer'),
                 style: XpertTypography.caption,
               ),
             ],
@@ -404,11 +431,11 @@ class KycWizardScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: XpertColors.background,
       appBar: AppBar(
-        title: Text('KYC · ${steps[step.value]}'),
+        title: Text(ref.t('kyc.title', {'step': steps[step.value]})),
         actions: [
           TextButton(
             onPressed: () => ref.read(authProvider.notifier).signOut(),
-            child: const Text('Sign out'),
+            child: Text(ref.t('kyc.cta.sign_out')),
           ),
         ],
       ),
@@ -445,7 +472,7 @@ class KycWizardScreen extends HookConsumerWidget {
                                 error.value = null;
                                 step.value -= 1;
                               },
-                        child: const Text('Back'),
+                        child: Text(ref.t('kyc.cta.back')),
                       ),
                     ),
                   if (step.value > 0) const SizedBox(width: XpertSpacing.sm),
@@ -461,8 +488,8 @@ class KycWizardScreen extends HookConsumerWidget {
                             )
                           : Text(
                               step.value == steps.length - 1
-                                  ? 'Submit KYC'
-                                  : 'Continue',
+                                  ? ref.t('kyc.cta.submit')
+                                  : ref.t('kyc.cta.continue'),
                             ),
                     ),
                   ),

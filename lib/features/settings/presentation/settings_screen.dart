@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../core/i18n/app_locale.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/i18n/locale_provider.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../legal/data/legal_document_api.dart';
 
 /// Settings: language switch, WhatsApp / notification toggles, sign out.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -77,6 +80,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final profile = ref.watch(authProvider).valueOrNull?.profile;
     final currentLocale = ref.watch(localeProvider);
     final localeLabel = currentLocale.labelNative;
+    final legalDocuments = ref.watch(legalDocumentsProvider);
 
     return Scaffold(
       backgroundColor: XpertColors.background,
@@ -113,6 +117,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: profile?.pushOptIn ?? true,
             enabled: !_savingPrefs,
             onChanged: (v) => _setPref(push: v),
+          ),
+          const SizedBox(height: XpertSpacing.xl),
+          Text(ref.t('settings.legal.title'), style: XpertTypography.caption),
+          const SizedBox(height: XpertSpacing.sm),
+          legalDocuments.when(
+            data: (docs) => Column(
+              children: [
+                for (final doc in docs) ...[
+                  _Tile(
+                    icon: Icons.description_outlined,
+                    title: doc.name,
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: XpertColors.muted),
+                    onTap: () => context.push(
+                      '/legal-document',
+                      extra: (doc.name, doc.pdfUrl),
+                    ),
+                  ),
+                  const SizedBox(height: XpertSpacing.sm),
+                ],
+              ],
+            ),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: XpertSpacing.md),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: XpertSpacing.sm),
+              child: Text(
+                ref.t('settings.legal.error'),
+                style: XpertTypography.caption,
+              ),
+            ),
           ),
           const SizedBox(height: XpertSpacing.xl),
           SizedBox(

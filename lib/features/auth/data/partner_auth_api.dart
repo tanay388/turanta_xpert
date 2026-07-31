@@ -8,11 +8,15 @@ class PartnerAuthApi {
   PartnerAuthApi(this._dio);
   final Dio _dio;
 
-  Future<PartnerUser> getMe() async {
+  Future<PartnerUser> getMe({String? referralCode}) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
         '/user',
-        queryParameters: const {'role': 'partner'},
+        queryParameters: {
+          'role': 'partner',
+          if (referralCode != null && referralCode.trim().isNotEmpty)
+            'referralCode': referralCode.trim(),
+        },
       );
       return PartnerUser.fromJson(res.data!);
     } on DioException catch (e) {
