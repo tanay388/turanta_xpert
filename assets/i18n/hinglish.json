@@ -338,5 +338,8 @@
   "common.error_generic": "Kuch galat ho gaya. Phir try karo.",
   "target.rate_band.next": "Next band",
   "login.referral.label": "Referral code (optional)",
-  "splash.tagline": "Apne time par kamao."
+  "splash.tagline": "Apne time par kamao.",
+  "update.title": "Update zaroori hai",
+  "update.body": "Turanta Xpert ka yeh version ab supported nahi hai. Jobs milte rehne ke liye latest version par update karein.",
+  "update.cta": "Abhi update karein"
 }

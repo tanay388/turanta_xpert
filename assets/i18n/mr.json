@@ -338,5 +338,8 @@
   "common.error_generic": "काहीतरी चूक झाली. पुन्हा प्रयत्न करा.",
   "target.rate_band.next": "पुढील बँड",
   "login.referral.label": "रेफरल कोड (ऐच्छिक)",
-  "splash.tagline": "Tumchya vela pramane kamva."
+  "splash.tagline": "Tumchya vela pramane kamva.",
+  "update.title": "अपडेट आवश्यक आहे",
+  "update.body": "Turanta Xpert ची ही आवृत्ती आता समर्थित नाही. जॉब्स मिळत राहण्यासाठी कृपया नवीनतम आवृत्तीवर अपडेट करा.",
+  "update.cta": "आत्ता अपडेट करा"
 }

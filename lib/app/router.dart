@@ -4,6 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/auth/presentation/device_blocked_screen.dart';
+import '../features/auth/presentation/update_required_screen.dart';
+import '../core/network/app_version_gate.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_verification_screen.dart';
 import '../features/auth/presentation/pending_approval_screen.dart';
@@ -86,6 +88,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _Routes.deviceBlocked,
         builder: (_, _) => const DeviceBlockedScreen(),
+      ),
+      GoRoute(
+        path: '/update-required',
+        builder: (_, _) => const UpdateRequiredScreen(),
       ),
       // Persistent 5-tab bottom-nav shell for active partners.
       StatefulShellRoute.indexedStack(
@@ -186,6 +192,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       final auth = ref.read(authProvider);
 
+      // Force-update gate wins over everything.
+      if (loc == '/update-required') return null;
+      if (ref.read(appVersionGateProvider).valueOrNull == false) {
+        return '/update-required';
+      }
+
       if (auth.isLoading && loc == _Routes.splash) return null;
       if (auth.hasError && loc == _Routes.splash) return null;
 
@@ -248,6 +260,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 class _RouterRefresh extends ChangeNotifier {
   _RouterRefresh(this._ref) {
     _ref.listen(authProvider, (_, _) => notifyListeners());
+    _ref.listen(appVersionGateProvider, (_, _) => notifyListeners());
   }
 
   final Ref _ref;

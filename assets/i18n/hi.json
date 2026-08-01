@@ -338,5 +338,8 @@
   "common.error_generic": "कुछ गड़बड़ हो गई। दोबारा कोशिश करें।",
   "target.rate_band.next": "अगला बैंड",
   "login.referral.label": "रेफ़रल कोड (वैकल्पिक)",
-  "splash.tagline": "Apni marzi ke waqt par kamayein."
+  "splash.tagline": "Apni marzi ke waqt par kamayein.",
+  "update.title": "अपडेट ज़रूरी है",
+  "update.body": "Turanta Xpert का यह वर्ज़न अब समर्थित नहीं है। जॉब्स पाते रहने के लिए कृपया नवीनतम वर्ज़न पर अपडेट करें।",
+  "update.cta": "अभी अपडेट करें"
 }

@@ -338,5 +338,8 @@
   "common.error_generic": "Something went wrong. Try again.",
   "target.rate_band.next": "Next band",
   "login.referral.label": "Referral code (optional)",
-  "splash.tagline": "Earn on your schedule."
+  "splash.tagline": "Earn on your schedule.",
+  "update.title": "Update required",
+  "update.body": "This version of Turanta Xpert is no longer supported. Please update to the latest version to keep receiving jobs.",
+  "update.cta": "Update now"
 }
