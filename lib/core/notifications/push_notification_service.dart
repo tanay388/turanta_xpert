@@ -153,7 +153,8 @@ class PushNotificationService {
 
   Future<void> _initLocalNotifications() async {
     try {
-      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidInit =
+          AndroidInitializationSettings('@drawable/ic_stat_final_notification');
       const iosInit = DarwinInitializationSettings();
       await _local.initialize(
         settings: const InitializationSettings(android: androidInit, iOS: iosInit),
@@ -222,7 +223,7 @@ class PushNotificationService {
             channelDescription: _androidChannel.description,
             importance: Importance.high,
             priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
+            icon: '@drawable/ic_stat_final_notification',
           ),
         ),
         payload: message.data['hyperLink']?.toString(),
