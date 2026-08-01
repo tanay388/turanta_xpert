@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:119966215010:android:089363746a53347c55da3b",
+        "mobilesdk_app_id": "1:119966215010:android:5c3ad4fbbe48d48755da3b",
         "android_client_info": {
-          "package_name": "com.tanay.turanta_user"
+          "package_name": "com.turanta.turanta_user"
         }
       },
       "oauth_client": [],
