@@ -29,6 +29,10 @@ class KycWizardScreen extends HookConsumerWidget {
     final panBack = useState<String?>(null);
     final panNumber = useTextEditingController();
     final selfie = useState<String?>(null);
+    // Stored values are private storage keys, which cannot be rendered
+    // directly — keep the short-lived signed preview links separately, keyed
+    // by the stored key.
+    final previews = useState<Map<String, String>>(const {});
     final account = useTextEditingController();
     final accountConfirm = useTextEditingController();
     final ifsc = useTextEditingController();
@@ -79,9 +83,13 @@ class KycWizardScreen extends HookConsumerWidget {
       busy.value = true;
       error.value = null;
       try {
-        final url = await ref.read(partnerAuthApiProvider).uploadKycImage(file.path);
-        target.value = url;
-        return url;
+        final result =
+            await ref.read(partnerAuthApiProvider).uploadKycImage(file.path);
+        target.value = result.key;
+        if (result.previewUrl != null) {
+          previews.value = {...previews.value, result.key: result.previewUrl!};
+        }
+        return result.key;
       } on ApiException catch (e) {
         error.value = e.message;
         return null;
@@ -305,7 +313,7 @@ class KycWizardScreen extends HookConsumerWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(XpertRadius.md),
                     child: Image.network(
-                      selfie.value!,
+                      previews.value[selfie.value!] ?? selfie.value!,
                       height: 160,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => const SizedBox.shrink(),

@@ -121,7 +121,15 @@ class PartnerAuthApi {
     }
   }
 
-  Future<String> uploadKycImage(String filePath) async {
+  /// Uploads a KYC document.
+  ///
+  /// KYC files are stored privately, so `url` is an opaque storage key — that
+  /// is the value to submit with the KYC form. `previewUrl` is a short-lived
+  /// signed link usable for showing the file right after upload; it expires
+  /// and must never be persisted.
+  Future<({String key, String? previewUrl})> uploadKycImage(
+    String filePath,
+  ) async {
     try {
       final form = FormData.fromMap({
         'objectType': 'kyc_image',
@@ -134,11 +142,11 @@ class PartnerAuthApi {
         '/common/upload',
         data: form,
       );
-      final url = res.data?['url'] as String?;
-      if (url == null || url.isEmpty) {
-        throw ApiException(message: 'Upload failed: missing URL');
+      final key = res.data?['url'] as String?;
+      if (key == null || key.isEmpty) {
+        throw ApiException(message: 'Upload failed: missing file reference');
       }
-      return url;
+      return (key: key, previewUrl: res.data?['previewUrl'] as String?);
     } on DioException catch (e) {
       throw _mapDio(e);
     }
