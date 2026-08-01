@@ -216,18 +216,40 @@ class JobsApi {
     );
   }
 
-  Future<PartnerJob> start(int id, String startOtp) async {
+  Future<PartnerJob> start(
+    int id,
+    String startOtp, {
+    double? latitude,
+    double? longitude,
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/partner/jobs/$id/start',
-      data: {'startOtp': startOtp},
+      data: {
+        'startOtp': startOtp,
+        if (latitude != null && longitude != null) ...{
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      },
     );
     return PartnerJob.fromJson(res.data ?? const {});
   }
 
-  Future<PartnerJob> complete(int id, String endOtp) async {
+  Future<PartnerJob> complete(
+    int id,
+    String endOtp, {
+    double? latitude,
+    double? longitude,
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/partner/jobs/$id/complete',
-      data: {'endOtp': endOtp},
+      data: {
+        'endOtp': endOtp,
+        if (latitude != null && longitude != null) ...{
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      },
     );
     return PartnerJob.fromJson(res.data ?? const {});
   }

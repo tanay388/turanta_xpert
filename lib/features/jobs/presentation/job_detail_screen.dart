@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -65,6 +66,28 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     }
   }
 
+  Future<Position?> _currentPosition() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _submit(PartnerJob job) async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != 4) {
@@ -77,10 +100,23 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     setState(() => _busy = true);
     try {
       final api = ref.read(jobsApiProvider);
+      // Best-effort GPS snapshot for the booking timeline — never blocks the
+      // OTP flow if permission/location is unavailable.
+      final position = await _currentPosition();
       if (job.isAssigned) {
-        await api.start(job.id, otp);
+        await api.start(
+          job.id,
+          otp,
+          latitude: position?.latitude,
+          longitude: position?.longitude,
+        );
       } else if (job.isInProgress) {
-        await api.complete(job.id, otp);
+        await api.complete(
+          job.id,
+          otp,
+          latitude: position?.latitude,
+          longitude: position?.longitude,
+        );
       }
       _otpCtrl.clear();
       ref.invalidate(partnerJobProvider(widget.jobId));
