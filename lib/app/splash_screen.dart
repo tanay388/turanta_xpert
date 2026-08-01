@@ -57,34 +57,48 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: XpertColors.background,
+      // Matches the native splash + logo canvas so the handoff from the
+      // OS launch screen into Flutter is seamless.
+      backgroundColor: const Color(0xFFF8F8F8),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(XpertSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: XpertColors.primary,
-                  borderRadius: BorderRadius.circular(XpertRadius.lg),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 650),
+                curve: Curves.easeOutCubic,
+                builder: (context, t, child) => Opacity(
+                  opacity: t,
+                  child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
                 ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'TX',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    color: XpertColors.onPrimary,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(XpertRadius.lg + 8),
+                      child: Image.asset(
+                        'assets/logo/turanta_xpert_app_logo.png',
+                        width: 128,
+                        height: 128,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: XpertSpacing.lg),
+                    Text(
+                      'Turanta Xpert',
+                      style: XpertTypography.title.copyWith(fontSize: 26),
+                    ),
+                    const SizedBox(height: XpertSpacing.xs),
+                    Text(
+                      ref.t('splash.tagline'),
+                      style: XpertTypography.caption
+                          .copyWith(color: XpertColors.muted),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: XpertSpacing.lg),
-              Text(
-                'Turanta Xpert',
-                style: XpertTypography.title.copyWith(fontSize: 26),
               ),
               const SizedBox(height: XpertSpacing.xl),
               if (_error != null) ...[

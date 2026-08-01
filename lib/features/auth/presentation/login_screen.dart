@@ -152,20 +152,17 @@ class _BrandHeader extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 72,
-          height: 72,
           decoration: BoxDecoration(
-            color: XpertColors.primary,
             borderRadius: BorderRadius.circular(XpertRadius.lg),
+            border: Border.all(color: XpertColors.border.withValues(alpha: 0.4)),
           ),
-          alignment: Alignment.center,
-          child: const Text(
-            'TX',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: XpertColors.onPrimary,
-              letterSpacing: -0.5,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(XpertRadius.lg),
+            child: Image.asset(
+              'assets/logo/turanta_xpert_app_logo.png',
+              width: 84,
+              height: 84,
+              fit: BoxFit.cover,
             ),
           ),
         ),

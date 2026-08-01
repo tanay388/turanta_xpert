@@ -337,5 +337,6 @@
   "profile.gender.prefer_not_to_say": "बताना नहीं चाहते",
   "common.error_generic": "कुछ गड़बड़ हो गई। दोबारा कोशिश करें।",
   "target.rate_band.next": "अगला बैंड",
-  "login.referral.label": "रेफ़रल कोड (वैकल्पिक)"
+  "login.referral.label": "रेफ़रल कोड (वैकल्पिक)",
+  "splash.tagline": "Apni marzi ke waqt par kamayein."
 }

@@ -337,5 +337,6 @@
   "profile.gender.prefer_not_to_say": "Batana nahi chahte",
   "common.error_generic": "Kuch galat ho gaya. Phir try karo.",
   "target.rate_band.next": "Next band",
-  "login.referral.label": "Referral code (optional)"
+  "login.referral.label": "Referral code (optional)",
+  "splash.tagline": "Apne time par kamao."
 }

@@ -337,5 +337,6 @@
   "profile.gender.prefer_not_to_say": "Prefer not to say",
   "common.error_generic": "Something went wrong. Try again.",
   "target.rate_band.next": "Next band",
-  "login.referral.label": "Referral code (optional)"
+  "login.referral.label": "Referral code (optional)",
+  "splash.tagline": "Earn on your schedule."
 }
