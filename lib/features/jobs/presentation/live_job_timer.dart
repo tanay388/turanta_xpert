@@ -106,8 +106,20 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
         children: [
           Row(
             children: [
-              _LiveDotBadge(color: accent, label: ref.t('jobs.live.badge')),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  overtime
+                      ? ref.t('jobs.live.overtime')
+                      : ref.t('jobs.live.remaining_label'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: XpertTypography.label.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 formatJobClock(overtime ? elapsed : remaining),
                 style: XpertTypography.title.copyWith(
@@ -118,14 +130,7 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            overtime
-                ? ref.t('jobs.live.overtime')
-                : ref.t('jobs.live.remaining_label'),
-            style: XpertTypography.caption.copyWith(color: XpertColors.muted),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(XpertRadius.pill),
             child: LinearProgressIndicator(
