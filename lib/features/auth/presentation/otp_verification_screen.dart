@@ -55,7 +55,7 @@ class OtpVerificationScreen extends HookConsumerWidget {
 
     useEffect(() {
       if (state is OtpVerifyFailed) {
-        codeError.value = state.message;
+        codeError.value = ref.t(state.message);
       }
       return null;
     }, [state]);

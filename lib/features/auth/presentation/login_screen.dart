@@ -31,7 +31,7 @@ class LoginScreen extends HookConsumerWidget {
       } else if (state is OtpFailed) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
-          phoneError.value = state.message;
+          phoneError.value = ref.t(state.message);
         });
       }
       return null;

@@ -2,6 +2,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+/// Firebase's own messages are written for developers — the device-attestation
+/// one literally tells the reader to check logcat. Map the codes worth acting
+/// on to our own copy and send everything else to one generic line. Every
+/// [OtpFailed] / [OtpVerifyFailed] message is an i18n key.
+String _sendFailureKey(FirebaseAuthException e) {
+  return switch (e.code) {
+    'invalid-phone-number' => 'login.phone.error',
+    'network-request-failed' => 'otp.error.network',
+    'too-many-requests' || 'quota-exceeded' => 'otp.error.too_many',
+    // Play Integrity / reCAPTCHA attestation failed — usually transient, and
+    // retrying picks the reCAPTCHA fallback.
+    'missing-client-identifier' ||
+    'app-not-authorized' ||
+    'captcha-check-failed' => 'otp.error.verification',
+    _ => 'otp.error.generic',
+  };
+}
+
 sealed class OtpState {
   const OtpState();
 }
@@ -55,9 +73,7 @@ class OtpController extends Notifier<OtpState> {
     state = const OtpSending();
 
     if (Firebase.apps.isEmpty) {
-      state = const OtpFailed(
-        'Firebase is not configured. Run flutterfire configure and restart.',
-      );
+      state = const OtpFailed('otp.error.generic');
       return;
     }
 
@@ -70,12 +86,12 @@ class OtpController extends Notifier<OtpState> {
           try {
             await auth.signInWithCredential(credential);
             state = const OtpSucceeded();
-          } catch (e) {
-            state = OtpFailed(e.toString());
+          } catch (_) {
+            state = const OtpFailed('otp.error.generic');
           }
         },
         verificationFailed: (FirebaseAuthException e) {
-          state = OtpFailed(e.message ?? 'Could not send OTP. Try again.');
+          state = OtpFailed(_sendFailureKey(e));
         },
         codeSent: (verificationId, _) {
           state = OtpCodeSent(verificationId: verificationId, phone: phone);
@@ -87,9 +103,9 @@ class OtpController extends Notifier<OtpState> {
         },
       );
     } on FirebaseAuthException catch (e) {
-      state = OtpFailed(e.message ?? 'Could not send OTP. Try again.');
-    } catch (e) {
-      state = OtpFailed(e.toString());
+      state = OtpFailed(_sendFailureKey(e));
+    } catch (_) {
+      state = const OtpFailed('otp.error.generic');
     }
   }
 
@@ -122,13 +138,15 @@ class OtpController extends Notifier<OtpState> {
       state = const OtpSucceeded();
     } on FirebaseAuthException catch (e) {
       state = OtpVerifyFailed(
-        message: e.message ?? 'Invalid OTP. Try again.',
+        message: e.code == 'invalid-verification-code'
+            ? 'otp.error.invalid_code'
+            : _sendFailureKey(e),
         verificationId: session.verificationId,
         phone: session.phone,
       );
-    } catch (e) {
+    } catch (_) {
       state = OtpVerifyFailed(
-        message: e.toString(),
+        message: 'otp.error.generic',
         verificationId: session.verificationId,
         phone: session.phone,
       );

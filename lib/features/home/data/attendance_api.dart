@@ -265,6 +265,7 @@ class AttendanceHistoryItem {
   const AttendanceHistoryItem({
     required this.id,
     required this.attendanceStatus,
+    required this.attendanceOutcome,
     required this.scheduledStartAt,
     required this.scheduledEndAt,
     this.checkinAt,
@@ -277,6 +278,7 @@ class AttendanceHistoryItem {
 
   final int id;
   final String attendanceStatus;
+  final String attendanceOutcome;
   final DateTime scheduledStartAt;
   final DateTime scheduledEndAt;
   final DateTime? checkinAt;
@@ -295,6 +297,7 @@ class AttendanceHistoryItem {
     return AttendanceHistoryItem(
       id: (json['id'] as num).toInt(),
       attendanceStatus: json['attendanceStatus'] as String? ?? '',
+      attendanceOutcome: json['attendanceOutcome'] as String? ?? '',
       scheduledStartAt:
           DateTime.parse(json['scheduledStartAt'] as String),
       scheduledEndAt: DateTime.parse(json['scheduledEndAt'] as String),

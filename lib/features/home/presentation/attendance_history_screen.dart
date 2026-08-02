@@ -101,6 +101,8 @@ class _AttendanceHistoryScreenState
   }
 }
 
+const _warning = Color(0xFFF57C00);
+
 class _HistoryCard extends ConsumerWidget {
   const _HistoryCard({required this.item});
 
@@ -108,71 +110,92 @@ class _HistoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final day = DateFormat('EEE, d MMM yyyy').format(
-      item.scheduledStartAt.toLocal(),
-    );
-    final status = _statusLabel(ref, item.attendanceStatus);
-    final color = _statusColor(item.attendanceStatus);
+    final start = item.scheduledStartAt.toLocal();
+    final day = DateFormat(
+      start.year == DateTime.now().year ? 'EEE, d MMM' : 'EEE, d MMM yyyy',
+    ).format(start);
+
+    final verdict = _verdict(ref);
+    final subtitle = [
+      if (item.checkinAt != null)
+        '${_fmt(item.checkinAt)} → ${_fmt(item.checkoutAt)}'
+      else
+        ref.t('attendance.no_check_in'),
+      ?(item.shiftLabel ?? item.shiftName),
+      ?item.warehouseName,
+    ].join('  ·  ');
 
     return Container(
-      padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.md),
         border: Border.all(color: XpertColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      // Stack, not Row + IntrinsicHeight: the intrinsic pass sizes the title
+      // row at its natural width, which defeats the Expanded and overflows
+      // once a verdict label runs long. A positioned rail stretches to the
+      // content height with no intrinsic pass at all.
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  day,
-                  style: XpertTypography.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                  ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              4 + XpertSpacing.sm + 2,
+              XpertSpacing.sm,
+              XpertSpacing.sm + 2,
+              XpertSpacing.sm,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    // The date is the fixed side: its format is bounded, so
+                    // it can take its natural width. The verdict flexes,
+                    // because its width is a translation away from anything —
+                    // a long locale string or a missing key would otherwise
+                    // push the row off the screen.
+                    Text(
+                      day,
+                      maxLines: 1,
+                      style: XpertTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(width: XpertSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        verdict.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: verdict.color,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(XpertRadius.pill),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: XpertTypography.caption.copyWith(fontSize: 12),
                 ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            item.shiftLabel ?? item.shiftName ?? '—',
-            style: XpertTypography.caption,
-          ),
-          if (item.warehouseName != null) ...[
-            Text(item.warehouseName!, style: XpertTypography.caption),
-          ],
-          const SizedBox(height: 8),
-          Text(
-            '${ref.t('attendance.check_in')}: ${_fmt(item.checkinAt)}',
-            style: XpertTypography.caption.copyWith(
-              color: XpertColors.onSurface,
+              ],
             ),
           ),
-          Text(
-            '${ref.t('attendance.check_out')}: ${_fmt(item.checkoutAt)}',
-            style: XpertTypography.caption.copyWith(
-              color: XpertColors.onSurface,
-            ),
+          Positioned(
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: 4,
+            child: ColoredBox(color: verdict.color),
           ),
         ],
       ),
@@ -184,23 +207,47 @@ class _HistoryCard extends ConsumerWidget {
     return DateFormat('h:mm a').format(dt.toLocal());
   }
 
-  String _statusLabel(WidgetRef ref, String status) {
-    return switch (status) {
-      'CHECKED_IN' => ref.t('attendance.status_checked_in'),
-      'CHECKED_OUT' => ref.t('attendance.status_checked_out'),
-      'AUTO_CHECKED_OUT' => ref.t('attendance.status_auto_out'),
-      'ABSENT' => ref.t('attendance.status_absent'),
-      _ => status,
+  ({String label, Color color}) _verdict(WidgetRef ref) {
+    return switch (item.attendanceOutcome) {
+      'PRESENT' => (
+          label: ref.t('attendance.outcome_present'),
+          color: XpertColors.success,
+        ),
+      'ABSENT' => (
+          label: ref.t('attendance.outcome_absent'),
+          color: XpertColors.danger,
+        ),
+      'LATE_CHECKIN' => (
+          label: ref.t('attendance.outcome_late_checkin'),
+          color: _warning,
+        ),
+      'EARLY_CHECKOUT' => (
+          label: ref.t('attendance.outcome_early_checkout'),
+          color: _warning,
+        ),
+      _ => _legacyStatus(ref),
     };
   }
 
-  Color _statusColor(String status) {
-    return switch (status) {
-      'CHECKED_IN' => XpertColors.success,
-      'CHECKED_OUT' => XpertColors.muted,
-      'AUTO_CHECKED_OUT' => const Color(0xFFF57C00),
-      'ABSENT' => XpertColors.danger,
-      _ => XpertColors.muted,
+  ({String label, Color color}) _legacyStatus(WidgetRef ref) {
+    return switch (item.attendanceStatus) {
+      'CHECKED_IN' => (
+          label: ref.t('attendance.status_checked_in'),
+          color: XpertColors.success,
+        ),
+      'CHECKED_OUT' => (
+          label: ref.t('attendance.status_checked_out'),
+          color: XpertColors.muted,
+        ),
+      'AUTO_CHECKED_OUT' => (
+          label: ref.t('attendance.status_auto_out'),
+          color: _warning,
+        ),
+      'ABSENT' => (
+          label: ref.t('attendance.status_absent'),
+          color: XpertColors.danger,
+        ),
+      _ => (label: item.attendanceStatus, color: XpertColors.muted),
     };
   }
 }
