@@ -52,6 +52,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^34.1.33
 
 dev_dependencies:
+  image_picker_platform_interface: ^2.10.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
