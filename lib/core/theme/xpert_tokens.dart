@@ -81,6 +81,18 @@ class XpertTypography {
     color: XpertColors.primary,
   );
 
+  /// Numbers that change while you look at them — a running shift clock, the
+  /// day's earnings. Tabular figures so digits keep their column and the value
+  /// stops jittering as it ticks.
+  static const metric = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    height: 1,
+    letterSpacing: -0.8,
+    color: XpertColors.onSurface,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
   static const title = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w700,

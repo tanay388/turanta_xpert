@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../app/shell/xpert_list_group.dart';
+import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/presentation/auth_controller.dart';
 
+/// Profile.
+///
+/// A pushed screen, so it keeps a plain app bar — the dark canvas belongs to
+/// the tabs a partner lands on, not to everything they open.
+///
+/// Inside, the four facts about an account used to be four separately bordered
+/// cards, one of which repeated the name already set in headline type at the
+/// top, and Edit profile appeared twice: once in the app bar and once as a
+/// full-width button underneath.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -15,106 +26,78 @@ class ProfileScreen extends ConsumerWidget {
     final profile = session?.profile;
     final name = profile?.displayName ?? ref.t('home.default_name');
     final phone = profile?.phone ?? session?.phone ?? '—';
-    final photo = profile?.photo;
     final shift = profile?.shift;
 
     return Scaffold(
       backgroundColor: XpertColors.background,
-      appBar: AppBar(
-        title: Text(ref.t('profile.title')),
-        actions: [
-          TextButton(
-            onPressed: () => context.push('/profile/edit'),
-            child: Text(ref.t('profile.edit')),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(ref.t('profile.title'))),
       body: ListView(
-        padding: const EdgeInsets.all(XpertSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          XpertSpacing.lg,
+          XpertSpacing.md,
+          XpertSpacing.lg,
+          XpertSpacing.xxl,
+        ),
         children: [
-          Center(
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: XpertColors.secondary,
-              backgroundImage:
-                  photo != null && photo.isNotEmpty ? NetworkImage(photo) : null,
-              child: photo == null || photo.isEmpty
-                  ? Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                      style: XpertTypography.title.copyWith(fontSize: 36),
-                    )
-                  : null,
-            ),
-          ),
-          const SizedBox(height: XpertSpacing.md),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: XpertTypography.title.copyWith(fontSize: 24),
-          ),
-          const SizedBox(height: XpertSpacing.xs),
-          Text(
-            phone,
-            textAlign: TextAlign.center,
-            style: XpertTypography.caption,
+          _Identity(name: name, phone: phone, photo: profile?.photo),
+          const SizedBox(height: XpertSpacing.xl),
+          SectionLabel(ref.t('profile.section.account')),
+          const SizedBox(height: XpertSpacing.sm),
+          XpertListGroup(
+            children: [
+              XpertListRow(
+                icon: Icons.badge_outlined,
+                title: ref.t('profile.gender'),
+                value: profile?.gender ?? '—',
+              ),
+              XpertListRow(
+                icon: Icons.schedule_rounded,
+                title: ref.t('profile.shift'),
+                value: shift == null
+                    ? '—'
+                    : '${shift.name} · ${shift.displayWindow}',
+              ),
+            ],
           ),
           const SizedBox(height: XpertSpacing.xl),
-          _InfoTile(
-            label: ref.t('profile.name'),
-            value: profile?.name?.trim().isNotEmpty == true
-                ? profile!.name!
-                : '—',
+          SectionLabel(ref.t('profile.section.more')),
+          const SizedBox(height: XpertSpacing.sm),
+          // Navigation, grouped and visually distinct from the facts above —
+          // the two used to look identical.
+          XpertListGroup(
+            children: [
+              XpertListRow(
+                icon: Icons.map_outlined,
+                title: ref.t('hub.title'),
+                onTap: () => context.push('/hub'),
+              ),
+              XpertListRow(
+                icon: Icons.account_balance_wallet_outlined,
+                title: ref.t('financial.title'),
+                onTap: () => context.push('/profile/financial'),
+              ),
+              XpertListRow(
+                icon: Icons.settings_outlined,
+                title: ref.t('settings.title'),
+                onTap: () => context.push('/settings'),
+              ),
+            ],
           ),
-          _InfoTile(label: ref.t('profile.phone'), value: phone),
-          _InfoTile(
-            label: ref.t('profile.gender'),
-            value: profile?.gender ?? '—',
-          ),
-          _InfoTile(
-            label: ref.t('profile.shift'),
-            value: shift != null
-                ? '${shift.name} (${shift.displayWindow})'
-                : '—',
-          ),
-          const SizedBox(height: XpertSpacing.lg),
-          _MenuTile(
-            icon: Icons.map_outlined,
-            label: ref.t('hub.title'),
-            onTap: () => context.push('/hub'),
-          ),
-          _MenuTile(
-            icon: Icons.account_balance_wallet_outlined,
-            label: ref.t('financial.title'),
-            onTap: () => context.push('/profile/financial'),
-          ),
-          _MenuTile(
-            icon: Icons.settings_outlined,
-            label: ref.t('settings.title'),
-            onTap: () => context.push('/settings'),
-          ),
-          const SizedBox(height: XpertSpacing.lg),
+          const SizedBox(height: XpertSpacing.xl),
+          // The one primary action, kept low where a thumb reaches it rather
+          // than duplicated up in the app bar.
           SizedBox(
-            height: 52,
+            height: 54,
             child: FilledButton.icon(
               onPressed: () => context.push('/profile/edit'),
-              icon: const Icon(Icons.edit),
+              icon: const Icon(Icons.edit_rounded, size: 19),
               label: Text(
                 ref.t('profile.edit_cta'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              style: FilledButton.styleFrom(
-                backgroundColor: XpertColors.primary,
-                foregroundColor: XpertColors.onPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: XpertSpacing.sm),
-          SizedBox(
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: () => ref.read(authProvider.notifier).signOut(),
-              icon: const Icon(Icons.logout),
-              label: Text(ref.t('pending.sign_out')),
             ),
           ),
         ],
@@ -123,88 +106,97 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _Identity extends ConsumerWidget {
+  const _Identity({required this.name, required this.phone, this.photo});
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final String name;
+  final String phone;
+  final String? photo;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: XpertSpacing.sm),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        border: Border.all(color: XpertColors.border),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(XpertRadius.md),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(XpertSpacing.md),
-            child: Row(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasPhoto = photo != null && photo!.isNotEmpty;
+    final initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .take(2)
+        .map((part) => part.isEmpty ? '' : part[0].toUpperCase())
+        .join();
+
+    return Column(
+      children: [
+        // The avatar is editable, and now says so — `profile.change_photo`
+        // existed as a string with nothing on this screen to attach it to.
+        Semantics(
+          button: true,
+          label: ref.t('profile.change_photo'),
+          child: InkWell(
+            onTap: () => context.push('/profile/edit'),
+            customBorder: const CircleBorder(),
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Icon(icon, color: XpertColors.muted),
-                const SizedBox(width: XpertSpacing.md),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: XpertTypography.body.copyWith(
-                      fontWeight: FontWeight.w600,
+                Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: XpertColors.secondary,
+                    image: hasPhoto
+                        ? DecorationImage(
+                            image: NetworkImage(photo!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: hasPhoto
+                      ? null
+                      : Text(
+                          initials.isEmpty ? 'P' : initials,
+                          style: XpertTypography.title.copyWith(fontSize: 30),
+                        ),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: XpertColors.primary,
+                      border: Border.all(color: XpertColors.background, width: 3),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 13,
+                      color: XpertColors.onPrimary,
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: XpertColors.muted),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: XpertSpacing.sm),
-      padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        border: Border.all(color: XpertColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: XpertTypography.caption),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: XpertTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 17,
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(height: XpertSpacing.md),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          style: XpertTypography.title.copyWith(fontSize: 22),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 3),
+        // The name and phone are already here in full, which is why the list
+        // below no longer repeats them.
+        Text(
+          phone,
+          textAlign: TextAlign.center,
+          style: XpertTypography.caption.copyWith(fontSize: 13),
+        ),
+      ],
     );
   }
 }

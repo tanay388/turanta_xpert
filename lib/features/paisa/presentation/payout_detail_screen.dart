@@ -45,7 +45,7 @@ class PayoutDetailScreen extends ConsumerWidget {
               Text(ref.t('paisa.breakdown.title'), style: XpertTypography.label),
               const SizedBox(height: XpertSpacing.sm),
               if (d.items.isEmpty)
-                _EmptyBreakdown(message: ref.t('paisa.empty'))
+                _EmptyBreakdown(message: ref.t('paisa.breakdown.empty'))
               else
                 for (final item in d.items) ...[
                   _LineItemRow(item: item),

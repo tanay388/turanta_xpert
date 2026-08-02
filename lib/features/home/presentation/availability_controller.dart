@@ -19,6 +19,43 @@ enum CheckInBlockedReason {
   other,
 }
 
+/// Where the partner stands with today's shift.
+///
+/// Derived in one place because the screen used to answer this with a handful
+/// of independent booleans, and they disagreed with the server: a finished day
+/// comes back as `canCheckIn: false` with **no** `checkInBlockedReason` —
+/// having already worked is not a block, it is a completed day — so the old
+/// `isCheckInBlocked` said false and the Check in button stayed live at 11pm
+/// on a shift that ended at 6.
+enum ShiftPhase {
+  /// Currently on shift.
+  onShift,
+
+  /// On shift, on break.
+  onBreak,
+
+  /// Worked and finished — checked out, or auto-checked-out by the cron.
+  complete,
+
+  /// Assigned but the check-in window has not opened yet.
+  upcoming,
+
+  /// The window is open and nothing is in the way.
+  ready,
+
+  /// Check-in closed because the shift was never started.
+  missed,
+
+  /// Approved leave today.
+  onLeave,
+
+  /// Account is not active.
+  inactive,
+
+  /// The server says no and gave no reason we model. Never enable on this.
+  unavailable,
+}
+
 class AttendanceState {
   const AttendanceState({
     this.snapshot,
@@ -40,10 +77,35 @@ class AttendanceState {
   bool get breakUsed =>
       breakSummary?['used'] == true || (snapshot?.breakUsed ?? false);
 
-  bool get isCheckInBlocked =>
-      currentShift?.checkInBlocked == true ||
-      currentShift?.isShiftMissed == true ||
-      currentShift?.isOnLeave == true;
+  /// The single source of truth for what the shift card shows and whether the
+  /// primary button does anything. Order matters — the first match wins.
+  ShiftPhase get phase {
+    if (isOnBreak) return ShiftPhase.onBreak;
+    if (isCheckedIn) return ShiftPhase.onShift;
+
+    final shift = currentShift;
+    if (shift == null) return ShiftPhase.unavailable;
+
+    if (shift.isOnLeave) return ShiftPhase.onLeave;
+    if (shift.isShiftMissed) return ShiftPhase.missed;
+    if (shift.isPartnerInactive) return ShiftPhase.inactive;
+    if (shift.isDayComplete) return ShiftPhase.complete;
+
+    // `canCheckIn` is the server's verdict and it is authoritative. Anything
+    // it refuses that we have not explained above is still a refusal.
+    if (!shift.canCheckIn) return ShiftPhase.unavailable;
+
+    // The server allows a check-in the moment no session exists, without
+    // regard for the clock; the window is enforced when the call is made. Do
+    // not offer a button that is going to be rejected.
+    if (DateTime.now().isBefore(shift.allowedCheckinFrom)) {
+      return ShiftPhase.upcoming;
+    }
+
+    return ShiftPhase.ready;
+  }
+
+  bool get isCheckInBlocked => phase != ShiftPhase.ready;
 
   bool get isShiftMissed => currentShift?.isShiftMissed ?? false;
   bool get isOnLeaveToday => currentShift?.isOnLeave ?? false;

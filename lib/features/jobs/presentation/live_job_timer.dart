@@ -141,18 +141,31 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
             ),
           ),
           const SizedBox(height: 10),
+          // Both sides are translated labels plus a time, and neither was
+          // constrained — in Hindi they ran off the card.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${ref.t('jobs.live.started')} ${timeFmt.format(started)}',
-                style:
-                    XpertTypography.caption.copyWith(color: XpertColors.muted),
+              Flexible(
+                child: Text(
+                  '${ref.t('jobs.live.started')} ${timeFmt.format(started)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: XpertTypography.caption.copyWith(
+                    color: XpertColors.muted,
+                  ),
+                ),
               ),
-              Text(
-                '${ref.t('jobs.live.ends')} ${timeFmt.format(end)}',
-                style:
-                    XpertTypography.caption.copyWith(color: XpertColors.muted),
+              const SizedBox(width: XpertSpacing.sm),
+              Flexible(
+                child: Text(
+                  '${ref.t('jobs.live.ends')} ${timeFmt.format(end)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: XpertTypography.caption.copyWith(
+                    color: XpertColors.muted,
+                  ),
+                ),
               ),
             ],
           ),

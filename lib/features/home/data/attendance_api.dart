@@ -41,6 +41,19 @@ class CurrentShiftPayload {
 
   bool get isOnLeave => checkInBlockedReason == 'ON_LEAVE';
 
+  bool get isPartnerInactive => checkInBlockedReason == 'PARTNER_INACTIVE';
+
+  /// The shift is over and was worked — checked out by the partner or by the
+  /// auto-checkout cron.
+  ///
+  /// The server reports this as `canCheckIn: false` with no
+  /// `checkInBlockedReason`, because "you already did today" is not a block,
+  /// it is a finished day. Nothing else on the payload says so directly.
+  bool get isDayComplete =>
+      attendanceStatusToday == 'CHECKED_OUT' ||
+      attendanceStatusToday == 'AUTO_CHECKED_OUT' ||
+      (dayStatus == 'COMPLETED' && attendanceStatusToday != null);
+
   factory CurrentShiftPayload.fromJson(Map<String, dynamic> json) {
     final shiftJson = json['shift'] as Map<String, dynamic>? ?? const {};
     return CurrentShiftPayload(

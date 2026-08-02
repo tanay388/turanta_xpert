@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../app/shell/xpert_screen_scaffold.dart';
+import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../data/referral_api.dart';
 import 'invite_sheet.dart';
 import 'referral_controller.dart';
+import 'widgets/referral_funnel.dart';
 
+/// Refer & Earn.
+///
+/// The code is the product — it is the thing a partner came here to get hold
+/// of — so it leads, on the canvas, at a size you can read across a room and
+/// dictate over a phone call. Everything else follows from it.
+///
+/// The screen used to open with a gift icon and "You've earned ₹0" set larger
+/// than the offer itself, which greeted every new partner with their own zero.
 class ReferralScreen extends ConsumerStatefulWidget {
   const ReferralScreen({super.key});
 
@@ -28,86 +40,114 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(referralProvider);
     final summary = state.summary;
+    final loading = state.isLoading && summary == null;
 
-    return Scaffold(
-      backgroundColor: XpertColors.background,
-      appBar: AppBar(title: Text(ref.t('referral.title'))),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(referralProvider.notifier).refresh(),
-        child: ListView(
-          padding: const EdgeInsets.all(XpertSpacing.lg),
-          children: [
-            _HeroCard(
-              summary: summary,
-              loading: state.isLoading && summary == null,
+    return XpertScreenScaffold(
+      title: ref.t('referral.title'),
+      header: summary == null
+          ? null
+          : _CodeBlock(
+              code: summary.code,
+              reward: summary.rewardAmount,
+              milestoneJobs: summary.milestoneJobs,
             ),
-            const SizedBox(height: XpertSpacing.lg),
-            SizedBox(
-              height: 56,
-              child: FilledButton.icon(
-                onPressed: summary == null ? null : () => _openInvite(summary),
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 24),
-                label: Text(
-                  ref.t('referral.cta.invite'),
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+      child: loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () => ref.read(referralProvider.notifier).refresh(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  XpertSpacing.lg,
+                  XpertSpacing.lg,
+                  XpertSpacing.lg,
+                  XpertSpacing.xxl,
                 ),
+                children: [
+                  SizedBox(
+                    height: 56,
+                    child: FilledButton.icon(
+                      onPressed: summary == null
+                          ? null
+                          : () => _openInvite(summary),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
+                      label: Text(
+                        ref.t('referral.cta.invite'),
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (state.error != null) ...[
+                    const SizedBox(height: XpertSpacing.md),
+                    Text(
+                      state.error!,
+                      style: XpertTypography.caption.copyWith(
+                        color: XpertColors.danger,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  // Only once there is something to celebrate. A ₹0 total set
+                  // in hero type is a discouragement, not a dashboard.
+                  if (summary != null && summary.totalEarned > 0) ...[
+                    const SizedBox(height: XpertSpacing.lg),
+                    _EarnedStrip(amount: summary.totalEarned),
+                  ],
+                  const SizedBox(height: XpertSpacing.xl),
+                  if (summary == null || summary.active.isEmpty)
+                    EmptyState(
+                      icon: Icons.group_add_rounded,
+                      title: ref.t('referral.empty.title'),
+                      body: ref.t('referral.empty.body', {
+                        'amount': (summary?.rewardAmount ?? 0).toStringAsFixed(0),
+                      }),
+                    )
+                  else ...[
+                    SectionLabel(
+                      ref.t('referral.active'),
+                      trailing: Text(
+                        '${summary.active.length}',
+                        style: XpertTypography.metric.copyWith(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: XpertSpacing.sm),
+                    for (final invite in summary.active) ...[
+                      ReferralInviteCard(
+                        item: invite,
+                        milestoneJobs: summary.milestoneJobs,
+                        onRemind: () => _remind(summary),
+                      ),
+                      const SizedBox(height: XpertSpacing.sm),
+                    ],
+                  ],
+                  if (summary != null && summary.lapsed.isNotEmpty) ...[
+                    const SizedBox(height: XpertSpacing.lg),
+                    SectionLabel(ref.t('referral.lapsed')),
+                    const SizedBox(height: XpertSpacing.sm),
+                    for (final invite in summary.lapsed) ...[
+                      ReferralInviteCard(
+                        item: invite,
+                        milestoneJobs: summary.milestoneJobs,
+                        onRemind: () => _remind(summary),
+                      ),
+                      const SizedBox(height: XpertSpacing.sm),
+                    ],
+                  ],
+                ],
               ),
             ),
-            if (state.error != null) ...[
-              const SizedBox(height: XpertSpacing.md),
-              Text(
-                state.error!,
-                style: XpertTypography.caption.copyWith(color: XpertColors.danger),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: XpertSpacing.xl),
-            Text(ref.t('referral.active'), style: XpertTypography.label),
-            const SizedBox(height: XpertSpacing.sm),
-            if (state.isLoading && summary == null)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (summary == null || summary.active.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  ref.t('referral.empty_active'),
-                  style: XpertTypography.caption,
-                  textAlign: TextAlign.center,
-                ),
-              )
-            else
-              ...summary.active.map(
-                (r) => Padding(
-                  padding: const EdgeInsets.only(bottom: XpertSpacing.sm),
-                  child: _InviteCard(
-                    item: r,
-                    milestoneJobs: summary.milestoneJobs,
-                    code: summary.code,
-                    shareLink: summary.shareLink,
-                  ),
-                ),
-              ),
-            if (summary != null && summary.lapsed.isNotEmpty) ...[
-              const SizedBox(height: XpertSpacing.xl),
-              Text(ref.t('referral.lapsed'), style: XpertTypography.label),
-              const SizedBox(height: XpertSpacing.sm),
-              ...summary.lapsed.map(
-                (r) => Padding(
-                  padding: const EdgeInsets.only(bottom: XpertSpacing.sm),
-                  child: _InviteCard(
-                    item: r,
-                    milestoneJobs: summary.milestoneJobs,
-                    code: summary.code,
-                    shareLink: summary.shareLink,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+    );
+  }
+
+  void _remind(ReferralSummary summary) {
+    SharePlus.instance.share(
+      ShareParams(
+        text: ref.t('referral.share.message', {
+          'code': summary.code,
+          'link': summary.shareLink,
+        }),
       ),
     );
   }
@@ -118,7 +158,9 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
       isScrollControlled: true,
       backgroundColor: XpertColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(XpertRadius.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(XpertRadius.sheetTop),
+        ),
       ),
       builder: (_) => InviteSheet(
         code: summary.code,
@@ -133,82 +175,118 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
   }
 }
 
-class _HeroCard extends ConsumerWidget {
-  const _HeroCard({required this.summary, required this.loading});
+/// The code, on the canvas, with the offer stated underneath it.
+class _CodeBlock extends ConsumerWidget {
+  const _CodeBlock({
+    required this.code,
+    required this.reward,
+    required this.milestoneJobs,
+  });
 
-  final ReferralSummary? summary;
-  final bool loading;
+  final String code;
+  final double reward;
+  final int milestoneJobs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(XpertSpacing.xl),
-      decoration: BoxDecoration(
-        color: XpertColors.secondary,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-      ),
-      child: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                const Icon(Icons.card_giftcard_rounded,
-                    size: 36, color: XpertColors.primary),
-                const SizedBox(height: XpertSpacing.sm),
-                Text(
-                  ref.t('referral.hero', {
-                    'amount': (summary?.rewardAmount ?? 0).toStringAsFixed(0),
-                  }),
-                  style: XpertTypography.title.copyWith(fontSize: 20),
-                  textAlign: TextAlign.center,
+    if (code.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: XpertSpacing.lg),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(XpertSpacing.md),
+          decoration: BoxDecoration(
+            color: XpertColors.canvasSoft,
+            borderRadius: BorderRadius.circular(XpertRadius.lg),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      ref.t('referral.code.label'),
+                      style: XpertTypography.eyebrow,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      code,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 4,
+                        height: 1,
+                        color: XpertColors.onCanvas,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: XpertSpacing.md),
-                Text(
-                  ref.t('referral.earned', {
-                    'amount': (summary?.totalEarned ?? 0).toStringAsFixed(0),
-                  }),
-                  style: XpertTypography.title.copyWith(fontSize: 32),
-                ),
-                if (summary != null && summary!.code.isNotEmpty) ...[
-                  const SizedBox(height: XpertSpacing.md),
-                  _CodeChip(code: summary!.code),
-                ],
-              ],
-            ),
+              ),
+              // Copy actually copies. The old chip showed a copy icon and
+              // opened the share sheet.
+              _CanvasAction(
+                icon: Icons.copy_rounded,
+                label: ref.t('referral.code.copy'),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: code));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(ref.t('referral.code.copied'))),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: XpertSpacing.sm),
+        Text(
+          ref.t('referral.offer', {
+            'amount': reward.toStringAsFixed(0),
+            'jobs': '$milestoneJobs',
+          }),
+          style: const TextStyle(
+            fontSize: 12.5,
+            height: 1.35,
+            color: XpertColors.onCanvasMuted,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _CodeChip extends ConsumerWidget {
-  const _CodeChip({required this.code});
-  final String code;
+class _CanvasAction extends StatelessWidget {
+  const _CanvasAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      color: XpertColors.surface,
-      borderRadius: BorderRadius.circular(XpertRadius.pill),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(XpertRadius.pill),
-        onTap: () => SharePlus.instance.share(ShareParams(text: code)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: XpertSpacing.md,
-            vertical: XpertSpacing.sm,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                code,
-                style: XpertTypography.label.copyWith(
-                  letterSpacing: 2,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(width: XpertSpacing.sm),
-              const Icon(Icons.copy_rounded, size: 18, color: XpertColors.muted),
-            ],
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(icon, size: 19, color: XpertColors.onCanvas),
           ),
         ),
       ),
@@ -216,113 +294,43 @@ class _CodeChip extends ConsumerWidget {
   }
 }
 
-class _InviteCard extends ConsumerWidget {
-  const _InviteCard({
-    required this.item,
-    required this.milestoneJobs,
-    required this.code,
-    required this.shareLink,
-  });
+class _EarnedStrip extends ConsumerWidget {
+  const _EarnedStrip({required this.amount});
 
-  final ReferralInvite item;
-  final int milestoneJobs;
-  final String code;
-  final String shareLink;
+  final double amount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (color, statusKey) = switch (item.status) {
-      'INVITED' => (XpertColors.muted, 'referral.status.invited'),
-      'SIGNED_UP' => (const Color(0xFFF57C00), 'referral.status.signed_up'),
-      'ACTIVE' => (XpertColors.primary, 'referral.status.active'),
-      'REWARDED' => (XpertColors.success, 'referral.status.rewarded'),
-      _ => (XpertColors.muted, 'referral.status.lapsed'),
-    };
-
-    final name = item.refereeDisplayName?.trim();
-    final title = (name == null || name.isEmpty)
-        ? ref.t('referral.invite_pending')
-        : name;
-
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        border: Border.all(color: XpertColors.border),
+        color: XpertColors.success.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(XpertRadius.lg),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: XpertTypography.body.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(XpertRadius.pill),
-                ),
-                child: Text(
-                  ref.t(statusKey),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
+          const Icon(
+            Icons.savings_rounded,
+            size: 20,
+            color: XpertColors.success,
           ),
-          if (item.serviceName != null) ...[
-            const SizedBox(height: 4),
-            Text(item.serviceName!, style: XpertTypography.caption),
-          ],
-          if (item.isActive) ...[
-            const SizedBox(height: XpertSpacing.sm),
-            Text(
-              ref.t('referral.steps', {
-                'n': '${(milestoneJobs - item.stepsCompleted).clamp(0, milestoneJobs)}',
-              }),
-              style: XpertTypography.caption.copyWith(fontWeight: FontWeight.w600),
+          const SizedBox(width: XpertSpacing.sm),
+          Expanded(
+            child: Text(
+              ref.t('referral.earned.label'),
+              style: XpertTypography.caption.copyWith(fontSize: 13),
             ),
-          ],
-          if (item.isRewarded) ...[
-            const SizedBox(height: XpertSpacing.sm),
-            Text(
-              '₹${item.rewardAmount.toStringAsFixed(0)}',
-              style: XpertTypography.body.copyWith(
-                color: XpertColors.success,
-                fontWeight: FontWeight.w700,
-              ),
+          ),
+          Text(
+            '₹${amount.toStringAsFixed(0)}',
+            style: XpertTypography.metric.copyWith(
+              fontSize: 20,
+              color: XpertColors.success,
             ),
-          ],
-          if (item.isInvited || item.isSignedUp) ...[
-            const SizedBox(height: XpertSpacing.sm),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _remind(ref),
-                icon: const Icon(Icons.notifications_active_outlined, size: 18),
-                label: Text(ref.t('referral.remind')),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
-  }
-
-  void _remind(WidgetRef ref) {
-    final message = ref.t('referral.share.message', {
-      'code': code,
-      'link': shareLink,
-    });
-    SharePlus.instance.share(ShareParams(text: message));
   }
 }
