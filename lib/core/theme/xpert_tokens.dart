@@ -7,6 +7,18 @@ class XpertColors {
 
   static const primary = Color(0xFF00CCFF);
   static const onPrimary = Color(0xFF000000);
+
+  /// The auth canvas. Unlike the customer app — whose mark ships on its own
+  /// black field and so dictates the backdrop — the Xpert logo is a square app
+  /// icon baked onto near-white (#F8F8F8, no alpha). It is shown as a tile
+  /// instead, which frees the canvas: this is the brand cyan taken down to
+  /// something a partner reads at 6am, and it tells the two apps apart at a
+  /// glance on a phone that has both.
+  static const canvas = Color(0xFF0B1720);
+  static const canvasSoft = Color(0xFF13222D);
+  static const onCanvas = Color(0xFFF4F9FC);
+  static const onCanvasMuted = Color(0xFF8CA3B2);
+
   static const secondary = Color(0xFFE6F9FF);
   static const onSecondary = Color(0xFF0A0A0A);
   static const surface = Color(0xFFFFFFFF);
@@ -41,12 +53,33 @@ class XpertRadius {
   static const md = 12.0;
   static const lg = 18.0;
   static const xl = 28.0;
+  static const sheetTop = 32.0;
   static const pill = 999.0;
 }
 
 @immutable
 class XpertTypography {
   const XpertTypography._();
+
+  /// Canvas-only styles. There is no bundled brand face — an auth screen that
+  /// waits on a webfont would undercut the one thing the brand promises — so
+  /// character comes from scale and tracking: a tight, heavy display against a
+  /// wide, small eyebrow.
+  static const display = TextStyle(
+    fontSize: 30,
+    fontWeight: FontWeight.w800,
+    height: 1.15,
+    letterSpacing: -0.9,
+    color: XpertColors.onCanvas,
+  );
+
+  static const eyebrow = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: 1.6,
+    color: XpertColors.primary,
+  );
 
   static const title = TextStyle(
     fontSize: 24,

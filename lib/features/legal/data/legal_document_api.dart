@@ -24,6 +24,31 @@ class LegalDocumentSummary {
   final String pdfUrl;
 }
 
+/// The two documents the sign-in consent line points at.
+///
+/// Either side can be null: an admin may not have tagged one yet, or may have
+/// deactivated it. Callers render the sentence without that link rather than a
+/// link that opens nothing.
+class LegalConsentDocuments {
+  const LegalConsentDocuments({this.privacyPolicy, this.terms});
+
+  factory LegalConsentDocuments.fromJson(Map<String, dynamic> json) {
+    LegalDocumentSummary? read(String key) {
+      final value = json[key];
+      if (value is! Map) return null;
+      return LegalDocumentSummary.fromJson(Map<String, dynamic>.from(value));
+    }
+
+    return LegalConsentDocuments(
+      privacyPolicy: read('privacyPolicy'),
+      terms: read('terms'),
+    );
+  }
+
+  final LegalDocumentSummary? privacyPolicy;
+  final LegalDocumentSummary? terms;
+}
+
 class LegalDocumentApi {
   LegalDocumentApi(this._dio);
   final Dio _dio;
@@ -42,6 +67,22 @@ class LegalDocumentApi {
       );
     }
   }
+
+  /// Unauthenticated — this is read on the login screen, before a token exists.
+  Future<LegalConsentDocuments> consent() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/legal-documents/consent',
+        queryParameters: const {'app': 'XPERT'},
+      );
+      return LegalConsentDocuments.fromJson(res.data ?? const {});
+    } on DioException catch (e) {
+      throw ApiException(
+        message: e.message ?? 'Failed to load documents',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
 }
 
 final legalDocumentApiProvider = Provider<LegalDocumentApi>((ref) {
@@ -50,4 +91,10 @@ final legalDocumentApiProvider = Provider<LegalDocumentApi>((ref) {
 
 final legalDocumentsProvider = FutureProvider.autoDispose<List<LegalDocumentSummary>>((ref) {
   return ref.watch(legalDocumentApiProvider).mine();
+});
+
+/// Not auto-disposed: the login screen is rebuilt on every keystroke in the
+/// phone field, and the consent documents change about once a year.
+final legalConsentProvider = FutureProvider<LegalConsentDocuments>((ref) {
+  return ref.watch(legalDocumentApiProvider).consent();
 });

@@ -52,6 +52,13 @@ class _Routes {
   static const referral = '/referral';
 
   static const Set<String> unauthenticated = {login, otp};
+
+  /// Reachable in either direction: the login screen's consent line opens it
+  /// before there is a session, and Settings opens it after. It is kept out of
+  /// [unauthenticated] deliberately — that set is also what forwards a
+  /// *signed-in* partner to their post-auth destination, which would break the
+  /// second case.
+  static bool isSessionAgnostic(String loc) => loc == legalDocument;
 }
 
 String? _postAuthDestination(Session session) {
@@ -197,6 +204,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (ref.read(appVersionGateProvider).valueOrNull == false) {
         return '/update-required';
       }
+
+      // Checked before any auth branch: a partner reading the terms should not
+      // be pulled elsewhere because their session happened to resolve while
+      // the PDF was open.
+      if (_Routes.isSessionAgnostic(loc)) return null;
 
       if (auth.isLoading && loc == _Routes.splash) return null;
       if (auth.hasError && loc == _Routes.splash) return null;
