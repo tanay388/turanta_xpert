@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../app/shell/xpert_list_group.dart';
+import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
 
-/// View + edit the partner's financial details (bank, PAN, GST, UAN).
-/// Editable even after KYC approval via `PATCH /partner/kyc/financial`.
+/// The partner's bank and tax details, read-only.
+///
+/// Editing has been taken out of the app. `PATCH /partner/kyc/financial` still
+/// exists and admins still use it — what is gone is the partner-facing form,
+/// so a partner who spots a wrong account number now has to go through support
+/// rather than change it themselves. The screen says so plainly instead of
+/// leaving them looking for a button that is not there.
+///
+/// Almost everything here arrives masked from the server, which is the whole
+/// character of the screen: it is for confirming that the details on file are
+/// the right ones, not for reading them back out.
 class FinancialDetailsScreen extends ConsumerStatefulWidget {
   const FinancialDetailsScreen({super.key});
 
@@ -20,34 +31,12 @@ class _FinancialDetailsScreenState
     extends ConsumerState<FinancialDetailsScreen> {
   PartnerKyc? _kyc;
   bool _loading = true;
-  bool _editing = false;
-  bool _saving = false;
   String? _error;
-
-  final _account = TextEditingController();
-  final _ifsc = TextEditingController();
-  final _bankName = TextEditingController();
-  final _holder = TextEditingController();
-  final _pan = TextEditingController();
-  final _gst = TextEditingController();
-  final _uan = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _account.dispose();
-    _ifsc.dispose();
-    _bankName.dispose();
-    _holder.dispose();
-    _pan.dispose();
-    _gst.dispose();
-    _uan.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -56,240 +45,229 @@ class _FinancialDetailsScreenState
       _error = null;
     });
     try {
-      final kyc = await ref.read(partnerAuthApiProvider).getKyc();
-      _kyc = kyc;
-      _resetControllers();
-    } catch (e) {
-      _error = e.toString();
+      _kyc = await ref.read(partnerAuthApiProvider).getKyc();
+    } catch (_) {
+      // The raw exception was previously printed onto the screen.
+      _error = ref.t('financial.error');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _resetControllers() {
-    final k = _kyc;
-    _account.text = '';
-    _pan.text = '';
-    _ifsc.text = k?.bankIfsc ?? '';
-    _bankName.text = k?.bankName ?? '';
-    _holder.text = k?.accountHolderName ?? '';
-    _gst.text = k?.gstNumber ?? '';
-    _uan.text = k?.uanNumber ?? '';
-  }
+  @override
+  Widget build(BuildContext context) {
+    final kyc = _kyc;
 
-  Future<void> _save() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      final body = <String, dynamic>{
-        'bankIfsc': _ifsc.text.trim(),
-        'bankName': _bankName.text.trim(),
-        'accountHolderName': _holder.text.trim(),
-        'gstNumber': _gst.text.trim(),
-        'uanNumber': _uan.text.trim(),
-      };
-      // Account number + PAN are masked; only overwrite when re-entered.
-      if (_account.text.trim().isNotEmpty) {
-        body['bankAccountNumber'] = _account.text.trim();
-      }
-      if (_pan.text.trim().isNotEmpty) {
-        body['panNumber'] = _pan.text.trim();
-      }
-      final updated =
-          await ref.read(partnerAuthApiProvider).updateFinancial(body);
-      _kyc = updated;
-      _resetControllers();
-      if (!mounted) return;
-      setState(() => _editing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.t('financial.saved'))),
-      );
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    return Scaffold(
+      backgroundColor: XpertColors.background,
+      appBar: AppBar(title: Text(ref.t('financial.title'))),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  XpertSpacing.lg,
+                  XpertSpacing.md,
+                  XpertSpacing.lg,
+                  XpertSpacing.xxl,
+                ),
+                children: [
+                  if (_error != null)
+                    EmptyState(
+                      icon: Icons.cloud_off_rounded,
+                      title: ref.t('financial.error'),
+                      body: ref.t('financial.error.body'),
+                    )
+                  else ...[
+                    if (kyc?.status != null) ...[
+                      _KycStatus(status: kyc!.status!),
+                      const SizedBox(height: XpertSpacing.xl),
+                    ],
+                    SectionLabel(ref.t('financial.bank')),
+                    const SizedBox(height: XpertSpacing.sm),
+                    XpertListGroup(
+                      children: [
+                        _Detail(
+                          label: ref.t('financial.holder'),
+                          value: kyc?.accountHolderName,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.bank_name'),
+                          value: kyc?.bankName,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.account_no'),
+                          value: kyc?.bankAccountNumberMasked,
+                          numeric: true,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.ifsc'),
+                          value: kyc?.bankIfsc,
+                          numeric: true,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: XpertSpacing.xl),
+                    SectionLabel(ref.t('financial.identity')),
+                    const SizedBox(height: XpertSpacing.sm),
+                    XpertListGroup(
+                      children: [
+                        _Detail(
+                          label: ref.t('financial.pan'),
+                          value: kyc?.panNumberMasked,
+                          numeric: true,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.aadhaar'),
+                          value: kyc?.aadhaarNumberMasked,
+                          numeric: true,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.gst'),
+                          value: kyc?.gstNumber,
+                          numeric: true,
+                        ),
+                        _Detail(
+                          label: ref.t('financial.uan'),
+                          value: kyc?.uanNumber,
+                          numeric: true,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: XpertSpacing.lg),
+                    // With no edit button, this is the answer to "these are
+                    // wrong, now what" — the screen has to give it.
+                    _Note(text: ref.t('financial.readonly_note')),
+                  ],
+                ],
+              ),
+            ),
+    );
   }
+}
+
+/// One label→value pair. Values that are account or document numbers are set
+/// in tabular figures so masked digits line up down the column.
+class _Detail extends StatelessWidget {
+  const _Detail({required this.label, this.value, this.numeric = false});
+
+  final String label;
+  final String? value;
+  final bool numeric;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: XpertColors.background,
-      appBar: AppBar(
-        title: Text(ref.t('financial.title')),
-        actions: [
-          if (!_loading && !_editing)
-            TextButton(
-              onPressed: () => setState(() => _editing = true),
-              child: Text(ref.t('financial.edit')),
+    final missing = value == null || value!.trim().isEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.md,
+        vertical: XpertSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: XpertTypography.caption.copyWith(fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          const SizedBox(width: XpertSpacing.sm),
+          Flexible(
+            child: Text(
+              missing ? '—' : value!,
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: numeric && !missing
+                  ? XpertTypography.metric.copyWith(fontSize: 14.5)
+                  : XpertTypography.label.copyWith(
+                      fontSize: 14.5,
+                      color: missing ? XpertColors.border : null,
+                    ),
+            ),
+          ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _editing
-              ? _buildEdit()
-              : _buildView(),
     );
   }
+}
 
-  Widget _buildView() {
-    final k = _kyc;
-    return ListView(
-      padding: const EdgeInsets.all(XpertSpacing.lg),
-      children: [
-        Text(ref.t('financial.bank'), style: XpertTypography.label),
-        const SizedBox(height: XpertSpacing.sm),
-        _row(ref.t('financial.holder'), k?.accountHolderName),
-        _row(ref.t('financial.bank_name'), k?.bankName),
-        _row(ref.t('financial.account_no'), k?.bankAccountNumberMasked),
-        _row(ref.t('financial.ifsc'), k?.bankIfsc),
-        const SizedBox(height: XpertSpacing.lg),
-        Text(ref.t('financial.identity'), style: XpertTypography.label),
-        const SizedBox(height: XpertSpacing.sm),
-        _row(ref.t('financial.pan'), k?.panNumberMasked),
-        _row(ref.t('financial.aadhaar'), k?.aadhaarNumberMasked),
-        _row(ref.t('financial.gst'), k?.gstNumber),
-        _row(ref.t('financial.uan'), k?.uanNumber),
-        if (_error != null) ...[
-          const SizedBox(height: XpertSpacing.md),
-          Text(
-            _error!,
-            style: XpertTypography.caption.copyWith(color: XpertColors.danger),
-          ),
-        ],
-      ],
-    );
-  }
+/// Where the partner's verification stands. It was on the payload all along
+/// and this screen never showed it, which left "why can't I be paid" with no
+/// answer anywhere in the app.
+class _KycStatus extends ConsumerWidget {
+  const _KycStatus({required this.status});
 
-  Widget _buildEdit() {
-    final k = _kyc;
-    return ListView(
-      padding: const EdgeInsets.all(XpertSpacing.lg),
-      children: [
-        Text(ref.t('financial.bank'), style: XpertTypography.label),
-        const SizedBox(height: XpertSpacing.sm),
-        _field(_holder, ref.t('financial.holder')),
-        _field(_bankName, ref.t('financial.bank_name')),
-        _field(
-          _account,
-          ref.t('financial.account_no'),
-          hint: k?.bankAccountNumberMasked,
-          keyboardType: TextInputType.number,
-        ),
-        _field(
-          _ifsc,
-          ref.t('financial.ifsc'),
-          capitalization: TextCapitalization.characters,
-        ),
-        const SizedBox(height: XpertSpacing.lg),
-        Text(ref.t('financial.identity'), style: XpertTypography.label),
-        const SizedBox(height: XpertSpacing.sm),
-        _field(
-          _pan,
-          ref.t('financial.pan'),
-          hint: k?.panNumberMasked,
-          capitalization: TextCapitalization.characters,
-        ),
-        _field(_gst, ref.t('financial.gst'),
-            capitalization: TextCapitalization.characters),
-        _field(_uan, ref.t('financial.uan'),
-            keyboardType: TextInputType.number),
-        if (_error != null) ...[
-          const SizedBox(height: XpertSpacing.sm),
-          Text(
-            _error!,
-            style: XpertTypography.caption.copyWith(color: XpertColors.danger),
-          ),
-        ],
-        const SizedBox(height: XpertSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _saving
-                    ? null
-                    : () {
-                        _resetControllers();
-                        setState(() {
-                          _editing = false;
-                          _error = null;
-                        });
-                      },
-                child: Text(ref.t('common.cancel')),
-              ),
-            ),
-            const SizedBox(width: XpertSpacing.sm),
-            Expanded(
-              flex: 2,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: XpertColors.primary,
-                  foregroundColor: XpertColors.onPrimary,
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(ref.t('financial.save')),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  final PartnerKycStatus status;
 
-  Widget _row(String label, String? value) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (color, icon, key) = switch (status) {
+      PartnerKycStatus.approved => (
+        XpertColors.success,
+        Icons.verified_rounded,
+        'financial.kyc.approved',
+      ),
+      PartnerKycStatus.rejected => (
+        XpertColors.danger,
+        Icons.error_outline_rounded,
+        'financial.kyc.rejected',
+      ),
+      PartnerKycStatus.draft || PartnerKycStatus.submitted => (
+        const Color(0xFFF57C00),
+        Icons.hourglass_bottom_rounded,
+        'financial.kyc.pending',
+      ),
+    };
+
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: XpertSpacing.sm),
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        border: Border.all(color: XpertColors.border),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(XpertRadius.lg),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(label, style: XpertTypography.caption),
-          const SizedBox(height: 4),
-          Text(
-            (value == null || value.isEmpty) ? '—' : value,
-            style: XpertTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 17,
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: XpertSpacing.sm),
+          Expanded(
+            child: Text(
+              ref.t(key),
+              style: XpertTypography.label.copyWith(
+                fontSize: 14,
+                color: color,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _field(
-    TextEditingController controller,
-    String label, {
-    String? hint,
-    TextInputType? keyboardType,
-    TextCapitalization capitalization = TextCapitalization.none,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: XpertSpacing.md),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        textCapitalization: capitalization,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
+class _Note extends StatelessWidget {
+  const _Note({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.lock_outline_rounded, size: 15, color: XpertColors.muted),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: XpertTypography.caption.copyWith(fontSize: 12, height: 1.45),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
