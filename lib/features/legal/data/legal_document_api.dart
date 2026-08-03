@@ -53,9 +53,18 @@ class LegalDocumentApi {
   LegalDocumentApi(this._dio);
   final Dio _dio;
 
+  /// The documents this app shows in Settings.
+  ///
+  /// `app` is sent explicitly: the server used to work out which documents to
+  /// return from the caller's account *role*, which has no answer for admin,
+  /// supervisor or warehouse-admin — so signing in with any of those returned
+  /// an empty list and the Legal section simply vanished.
   Future<List<LegalDocumentSummary>> mine() async {
     try {
-      final res = await _dio.get<List<dynamic>>('/legal-documents/mine');
+      final res = await _dio.get<List<dynamic>>(
+        '/legal-documents/mine',
+        queryParameters: const {'app': 'XPERT'},
+      );
       return (res.data ?? const [])
           .cast<Map<String, dynamic>>()
           .map(LegalDocumentSummary.fromJson)
