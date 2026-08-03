@@ -283,6 +283,7 @@
   "jobs.live.badge": "LIVE",
   "jobs.live.remaining": "{time} left",
   "jobs.live.remaining_label": "Time remaining",
+  "jobs.live.elapsed": "elapsed",
   "jobs.live.overtime": "Over scheduled time",
   "jobs.live.started": "Started",
   "jobs.live.ends": "Ends",

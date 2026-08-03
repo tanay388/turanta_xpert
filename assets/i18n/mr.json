@@ -283,6 +283,7 @@
   "jobs.live.badge": "लाइव्ह",
   "jobs.live.remaining": "{time} शिल्लक",
   "jobs.live.remaining_label": "उरलेला वेळ",
+  "jobs.live.elapsed": "झालेला वेळ",
   "jobs.live.overtime": "ठरलेल्या वेळेपेक्षा जास्त",
   "jobs.live.started": "सुरू",
   "jobs.live.ends": "संपेल",

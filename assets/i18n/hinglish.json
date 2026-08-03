@@ -283,6 +283,7 @@
   "jobs.live.badge": "LIVE",
   "jobs.live.remaining": "{time} bache",
   "jobs.live.remaining_label": "Time remaining",
+  "jobs.live.elapsed": "ho chuka",
   "jobs.live.overtime": "Scheduled time se zyada",
   "jobs.live.started": "Started",
   "jobs.live.ends": "Ends",

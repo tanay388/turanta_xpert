@@ -283,6 +283,7 @@
   "jobs.live.badge": "लाइव",
   "jobs.live.remaining": "{time} शेष",
   "jobs.live.remaining_label": "शेष समय",
+  "jobs.live.elapsed": "बीत चुका",
   "jobs.live.overtime": "तय समय से अधिक",
   "jobs.live.started": "शुरू",
   "jobs.live.ends": "समाप्त",

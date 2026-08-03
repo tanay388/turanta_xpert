@@ -64,6 +64,9 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
     final elapsed = jobTimeElapsed(started, now);
     final overtime = jobIsOvertime(end, now);
     final accent = overtime ? XpertColors.danger : XpertColors.primary;
+    // The fill can be brand cyan; the clock printed on a tint of that same
+    // cyan cannot — it lands at about 1.9:1.
+    final inkAccent = overtime ? XpertColors.danger : XpertColors.primaryDeep;
     final progress = overtime
         ? 1.0
         : (duration.inSeconds > 0
@@ -93,6 +96,11 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
       );
     }
 
+    // The label used to sit at the far left of the same line as the clock, and
+    // the two endpoint times in a row of their own further down — three
+    // separate readings of one thing. They are one block now: the label over
+    // its number, elapsed beside it as the counterweight, and the start and
+    // end times pinned to the ends of the bar they belong to.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
@@ -102,70 +110,91 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
         border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: Text(
-                  overtime
-                      ? ref.t('jobs.live.overtime')
-                      : ref.t('jobs.live.remaining_label'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: XpertTypography.label.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      overtime
+                          ? ref.t('jobs.live.overtime').toUpperCase()
+                          : ref.t('jobs.live.remaining_label').toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: XpertTypography.eyebrow.copyWith(
+                        color: XpertColors.muted,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    // A clock is unreadable truncated, so it scales down
+                    // instead — at 30pt it does not fit a 320pt screen beside
+                    // a translated label.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        formatJobClock(
+                          overtime ? now.difference(end) : remaining,
+                        ),
+                        style: XpertTypography.display.copyWith(
+                          fontSize: 32,
+                          color: inkAccent,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              // A clock is unreadable truncated, so it scales down instead —
-              // at 28pt it did not fit a 320pt screen beside a translated
-              // label.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    formatJobClock(overtime ? elapsed : remaining),
-                    style: XpertTypography.title.copyWith(
-                      color: accent,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
+              const SizedBox(width: XpertSpacing.sm),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatJobDurationShort(elapsed),
+                    style: XpertTypography.label.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
+                  Text(
+                    ref.t('jobs.live.elapsed'),
+                    style: XpertTypography.caption.copyWith(fontSize: 11.5),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(XpertRadius.pill),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: accent.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
-            ),
+          const SizedBox(height: XpertSpacing.md),
+          JobProgressBar(
+            progress: progress,
+            accent: accent,
+            track: accent.withValues(alpha: 0.18),
+            knobRing: XpertColors.surface,
           ),
-          const SizedBox(height: 10),
-          // Both sides are translated labels plus a time, and neither was
-          // constrained — in Hindi they ran off the card.
+          const SizedBox(height: XpertSpacing.xs),
+          // Expanded, not Flexible: Flexible sizes to its content, so both
+          // times bunched up on the left instead of marking the ends of the
+          // bar they describe.
           Row(
             children: [
-              Flexible(
+              Expanded(
                 child: Text(
                   '${ref.t('jobs.live.started')} ${timeFmt.format(started)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: XpertTypography.caption.copyWith(
                     color: XpertColors.muted,
+                    fontSize: 11.5,
                   ),
                 ),
               ),
               const SizedBox(width: XpertSpacing.sm),
-              Flexible(
+              Expanded(
                 child: Text(
                   '${ref.t('jobs.live.ends')} ${timeFmt.format(end)}',
                   maxLines: 1,
@@ -173,6 +202,7 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
                   textAlign: TextAlign.end,
                   style: XpertTypography.caption.copyWith(
                     color: XpertColors.muted,
+                    fontSize: 11.5,
                   ),
                 ),
               ),
@@ -180,6 +210,78 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Track, fill, and a knob at "now".
+///
+/// A bare [LinearProgressIndicator] shows how much of the bar is coloured but
+/// gives the eye nothing to land on, so the two times printed underneath read
+/// as a separate fact rather than as the ends of this bar.
+class JobProgressBar extends StatelessWidget {
+  const JobProgressBar({
+    super.key,
+    required this.progress,
+    required this.accent,
+    required this.track,
+    required this.knobRing,
+  });
+
+  final double progress;
+  final Color accent;
+  final Color track;
+
+  /// Drawn as a ring around the knob so it reads as sitting on top of the bar
+  /// rather than being part of the fill.
+  final Color knobRing;
+
+  static const _height = 8.0;
+  static const _knob = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final filled = (width * progress).clamp(0.0, width);
+
+        return SizedBox(
+          height: _knob,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Container(
+                height: _height,
+                decoration: BoxDecoration(
+                  color: track,
+                  borderRadius: BorderRadius.circular(XpertRadius.pill),
+                ),
+              ),
+              Container(
+                width: filled,
+                height: _height,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(XpertRadius.pill),
+                ),
+              ),
+              Positioned(
+                left: (filled - _knob / 2).clamp(0.0, width - _knob),
+                child: Container(
+                  width: _knob,
+                  height: _knob,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: knobRing, width: 3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

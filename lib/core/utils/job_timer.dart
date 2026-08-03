@@ -48,3 +48,16 @@ Duration jobTimeElapsed(DateTime start, [DateTime? now]) {
 bool jobIsOvertime(DateTime end, [DateTime? now]) {
   return (now ?? DateTime.now()).isAfter(end);
 }
+
+/// Compact elapsed/duration label: `1h 14m`, `48m`, `< 1m`.
+///
+/// Not [formatJobClock] — that is the ticking hero clock and needs its seconds.
+/// This is the quiet counterpart beside it, where seconds are noise.
+String formatJobDurationShort(Duration d) {
+  final total = d.isNegative ? Duration.zero : d;
+  final h = total.inHours;
+  final m = total.inMinutes.remainder(60);
+  if (h > 0) return m > 0 ? '${h}h ${m}m' : '${h}h';
+  if (m > 0) return '${m}m';
+  return '< 1m';
+}

@@ -6,6 +6,13 @@ class XpertColors {
   const XpertColors._();
 
   static const primary = Color(0xFF00CCFF);
+
+  /// The brand cyan darkened until it can carry meaning on a light background.
+  ///
+  /// [primary] is 1.8:1 on white — fine as a fill behind black text, unreadable
+  /// as text or an icon on top of one. Anything small and cyan-coloured should
+  /// use this instead; it is the same hue at 5:1.
+  static const primaryDeep = Color(0xFF00799A);
   static const onPrimary = Color(0xFF000000);
 
   /// The auth canvas. Unlike the customer app — whose mark ships on its own
