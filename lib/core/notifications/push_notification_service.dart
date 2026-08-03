@@ -30,8 +30,11 @@ class PushNotificationService {
   final FcmTokenRegistrar registerToken;
   final NotificationOpenHandler? onOpenedLink;
 
-  final _messaging = FirebaseMessaging.instance;
-  final _local = FlutterLocalNotificationsPlugin();
+  // Lazy, so constructing the service does not require Firebase to be
+  // initialised — a screen that only listens to [jobLifecycleEvents] can then
+  // be exercised in a widget test.
+  late final _messaging = FirebaseMessaging.instance;
+  late final _local = FlutterLocalNotificationsPlugin();
   final _jobLifecycle = StreamController<JobLifecycleEvent>.broadcast();
 
   StreamSubscription<String>? _tokenSub;

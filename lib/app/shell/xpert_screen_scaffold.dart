@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/xpert_tokens.dart';
 
@@ -35,6 +36,8 @@ class XpertScreenScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = context.canPop();
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -63,6 +66,10 @@ class XpertScreenScaffold extends StatelessWidget {
                     children: [
                       Row(
                         children: [
+                          if (canPop) ...[
+                            _BackButton(onTap: () => context.pop()),
+                            const SizedBox(width: XpertSpacing.sm),
+                          ],
                           Expanded(
                             child: Text(
                               title,
@@ -167,6 +174,38 @@ class _PillTabs extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// On the dark canvas, so it cannot borrow the app bar's styling.
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: MaterialLocalizations.of(context).backButtonTooltip,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.08),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: const SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(
+              Icons.arrow_back_rounded,
+              size: 20,
+              color: XpertColors.onCanvas,
+            ),
+          ),
+        ),
       ),
     );
   }

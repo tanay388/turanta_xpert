@@ -121,6 +121,11 @@ class PartnerJob {
   bool get isInProgress => status == 'IN_PROGRESS';
   bool get isCompleted => status == 'COMPLETED';
   bool get isNoShow => status == 'NO_SHOW';
+
+  /// The job is over, whichever way it ended — nothing left to travel to or
+  /// act on.
+  bool get isClosed => isCompleted || isNoShow;
+
   bool get hasReview => reviewStars != null;
 
   String get displayAddress {

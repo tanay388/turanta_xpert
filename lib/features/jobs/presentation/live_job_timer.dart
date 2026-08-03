@@ -120,12 +120,21 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                formatJobClock(overtime ? elapsed : remaining),
-                style: XpertTypography.title.copyWith(
-                  color: accent,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
+              // A clock is unreadable truncated, so it scales down instead —
+              // at 28pt it did not fit a 320pt screen beside a translated
+              // label.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    formatJobClock(overtime ? elapsed : remaining),
+                    style: XpertTypography.title.copyWith(
+                      color: accent,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],

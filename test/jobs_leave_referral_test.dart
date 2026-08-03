@@ -299,6 +299,51 @@ void main() {
       expect(stageIndexOf('REWARDED'), 3);
     });
 
+    testWidgets('a pushed referral screen has a way back', (tester) async {
+      // It is reached with context.push from Home, and on iOS there is no
+      // system back button to fall back on.
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () => context.push('/referral'),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/referral',
+            builder: (_, _) => const ReferralScreen(),
+          ),
+        ],
+      );
+
+      final translations = await tester.runAsync(
+        () => LocalizationService.load(AppLocale.en),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            translationsProvider.overrideWith((_) async => translations!),
+            referralProvider.overrideWith(() => _FakeReferral(_referralState)),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            theme: XpertTheme.light,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+    });
+
     testWidgets('a zero total is not set in hero type', (tester) async {
       await _pump(
         tester,
