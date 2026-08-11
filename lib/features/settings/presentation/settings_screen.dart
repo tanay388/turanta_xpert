@@ -32,6 +32,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _savingPrefs = false;
+  bool _deletingAccount = false;
 
   Future<void> _setPref({bool? whatsapp, bool? push}) async {
     setState(() => _savingPrefs = true);
@@ -155,6 +156,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (ok == true) await ref.read(authProvider.notifier).signOut();
   }
 
+  Future<void> _confirmDeleteAccount() async {
+    // Deleting is one step more dangerous than signing out — it ends the
+    // account, not just the session — so it gets its own, more explicit copy.
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ref.t('settings.delete_account.confirm.title')),
+        content: Text(ref.t('settings.delete_account.confirm.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ref.t('leave.no')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: XpertColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ref.t('settings.delete_account')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _deletingAccount = true);
+    try {
+      await ref.read(partnerAuthApiProvider).deleteAccount();
+      await ref.read(authProvider.notifier).signOut();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _deletingAccount = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(authProvider).valueOrNull?.profile;
@@ -253,6 +295,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 tone: XpertColors.danger,
                 trailing: const SizedBox.shrink(),
                 onTap: _confirmSignOut,
+              ),
+              XpertListRow(
+                icon: Icons.delete_outline_rounded,
+                title: ref.t('settings.delete_account'),
+                tone: XpertColors.danger,
+                trailing: const SizedBox.shrink(),
+                onTap: _deletingAccount ? null : _confirmDeleteAccount,
               ),
             ],
           ),

@@ -102,6 +102,16 @@ class PartnerAuthApi {
     }
   }
 
+  /// Permanently (soft-)deletes the calling Xpert's own account. Irreversible
+  /// from the app's point of view — call only after explicit confirmation.
+  Future<void> deleteAccount() async {
+    try {
+      await _dio.delete<void>('/user');
+    } on DioException catch (e) {
+      throw _mapDio(e);
+    }
+  }
+
   /// Updates WhatsApp / push notification preferences.
   Future<PartnerUser> updatePreferences({
     bool? whatsappOptIn,
