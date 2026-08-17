@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -16,10 +17,21 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   String? _error;
 
+  // The backend bootstrap call failed, so there is no [Session]/profile to
+  // read a phone from — this falls back to the raw Firebase identity so a
+  // partner stuck on a role conflict can see which number is signed in.
+  String? get _signedInPhone => fb.FirebaseAuth.instance.currentUser?.phoneNumber;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
+  }
+
+  Future<void> _signOut() async {
+    await ref.read(authProvider.notifier).signOut();
+    if (!mounted) return;
+    context.go('/login');
   }
 
   Future<void> _boot() async {
@@ -109,10 +121,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     color: XpertColors.danger,
                   ),
                 ),
+                if (_signedInPhone != null) ...[
+                  const SizedBox(height: XpertSpacing.xs),
+                  Text(
+                    ref.t('splash.signed_in_as', {'phone': _signedInPhone!}),
+                    textAlign: TextAlign.center,
+                    style: XpertTypography.caption
+                        .copyWith(color: XpertColors.muted),
+                  ),
+                ],
                 const SizedBox(height: XpertSpacing.md),
                 FilledButton(
                   onPressed: _boot,
                   child: Text(ref.t('splash.retry')),
+                ),
+                const SizedBox(height: XpertSpacing.sm),
+                OutlinedButton(
+                  onPressed: _signOut,
+                  child: Text(ref.t('splash.sign_out')),
                 ),
               ] else
                 const SizedBox(

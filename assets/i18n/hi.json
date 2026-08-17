@@ -86,6 +86,8 @@
   "settings.signout": "साइन आउट",
   "splash.retry": "फिर से कोशिश करें",
   "splash.error": "सर्वर से कनेक्ट नहीं हो सका। कनेक्शन जाँचकर फिर कोशिश करें।",
+  "splash.signed_in_as": "{phone} से साइन इन है",
+  "splash.sign_out": "साइन आउट",
   "login.welcome": "शिफ्ट शुरू करने के लिए साइन इन करें",
   "login.headline": "आपकी शिफ्ट यहीं से शुरू।",
   "login.sheet.description": "वेरिफिकेशन कोड पाने के लिए अपना मोबाइल नंबर डालें।",

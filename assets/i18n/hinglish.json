@@ -86,6 +86,8 @@
   "settings.signout": "Sign out",
   "splash.retry": "Phir se try karo",
   "splash.error": "Server se connect nahi ho paya. Connection check karke try karo.",
+  "splash.signed_in_as": "{phone} se sign in hai",
+  "splash.sign_out": "Sign out",
   "login.welcome": "Shift start karne ke liye sign in karo",
   "login.headline": "Aapki shift yahin se shuru.",
   "login.sheet.description": "Verification code ke liye apna mobile number daalo.",

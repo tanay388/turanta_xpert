@@ -86,6 +86,8 @@
   "settings.signout": "Sign out",
   "splash.retry": "Retry",
   "splash.error": "Couldn't reach the server. Check your connection and try again.",
+  "splash.signed_in_as": "Signed in as {phone}",
+  "splash.sign_out": "Sign out",
   "login.welcome": "Sign in to start your shift",
   "login.headline": "Your shift starts here.",
   "login.sheet.description": "Enter your mobile number to get a verification code.",
