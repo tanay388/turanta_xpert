@@ -392,7 +392,6 @@
   "kyc.doc.aadhaar_front": "आधार आगे",
   "kyc.doc.aadhaar_back": "आधार पीछे",
   "kyc.doc.pan_front": "पैन आगे",
-  "kyc.doc.pan_back": "पैन पीछे",
   "kyc.doc.selfie": "स्पष्ट सेल्फी",
   "kyc.field.full_name": "पूरा नाम",
   "kyc.field.select_dob": "जन्म तिथि चुनें",
@@ -433,5 +432,15 @@
   "update.title": "अपडेट ज़रूरी है",
   "update.body": "Turanta Xpert का यह वर्ज़न अब समर्थित नहीं है। जॉब्स पाते रहने के लिए कृपया नवीनतम वर्ज़न पर अपडेट करें।",
   "update.cta": "अभी अपडेट करें",
-  "login.rejected.hint": "कृपया वैध Turanta Xpert खाते से साइन इन करें।"
+  "login.rejected.hint": "कृपया वैध Turanta Xpert खाते से साइन इन करें।",
+  "legal.consent.title": "शुरू करने से पहले",
+  "legal.consent.subtitle": "हर दस्तावेज़ खोलकर पढ़ें। कुछ भी अपलोड करने से पहले यह एक बार करना होगा।",
+  "legal.consent.read": "पढ़ लिया",
+  "legal.consent.tap_to_read": "पढ़ने के लिए टैप करें",
+  "legal.consent.hint": "जारी रखने के लिए हर दस्तावेज़ खोलें",
+  "legal.consent.cta": "मैं सहमत हूँ, आगे बढ़ें",
+  "legal.consent.error": "आपकी सहमति दर्ज नहीं हो सकी। कृपया फिर कोशिश करें।",
+  "legal.consent.load_error": "दस्तावेज़ लोड नहीं हो सके। अपना कनेक्शन जाँचें।",
+  "kyc.pan.none": "मेरे पास पैन कार्ड नहीं है",
+  "kyc.pan.not_applicable": "लागू नहीं"
 }

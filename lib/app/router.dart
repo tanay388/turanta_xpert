@@ -17,6 +17,7 @@ import '../features/kyc/presentation/kyc_wizard_screen.dart';
 import '../features/language/presentation/language_selection_screen.dart';
 import '../features/leave/presentation/leave_screen.dart';
 import '../features/legal/presentation/pdf_viewer_screen.dart';
+import '../features/legal/presentation/legal_consent_screen.dart';
 import '../features/paisa/presentation/paisa_screen.dart';
 import '../features/paisa/presentation/payout_detail_screen.dart';
 import '../features/profile/presentation/edit_profile_screen.dart';
@@ -33,6 +34,7 @@ class _Routes {
   static const login = '/login';
   static const otp = '/otp';
   static const language = '/language';
+  static const legalConsent = '/legal-consent';
   static const kyc = '/kyc';
   static const pending = '/pending-approval';
   static const home = '/home';
@@ -61,6 +63,7 @@ class _Routes {
 
 String? _postAuthDestination(Session session) {
   if (session.needsLanguage) return _Routes.language;
+  if (session.needsLegalAcceptance) return _Routes.legalConsent;
   if (session.needsKyc) return _Routes.kyc;
   if (session.isPendingApproval || !session.canUseHome) return _Routes.pending;
   return _Routes.home;
@@ -83,6 +86,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _Routes.language,
         builder: (_, _) => const LanguageSelectionScreen(),
+      ),
+      GoRoute(
+        path: _Routes.legalConsent,
+        builder: (_, _) => const LegalConsentScreen(),
       ),
       GoRoute(path: _Routes.kyc, builder: (_, _) => const KycWizardScreen()),
       GoRoute(
@@ -227,11 +234,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         return _Routes.language;
       }
 
-      if (!session.needsLanguage && session.needsKyc && loc != _Routes.kyc) {
+      // Nothing may be uploaded before every legal document has been opened.
+      if (!session.needsLanguage &&
+          session.needsLegalAcceptance &&
+          loc != _Routes.legalConsent) {
+        return _Routes.legalConsent;
+      }
+
+      if (!session.needsLanguage &&
+          !session.needsLegalAcceptance &&
+          session.needsKyc &&
+          loc != _Routes.kyc) {
         return _Routes.kyc;
       }
 
       if (!session.needsLanguage &&
+          !session.needsLegalAcceptance &&
           !session.needsKyc &&
           !session.canUseHome &&
           loc != _Routes.pending) {
@@ -241,6 +259,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (session.canUseHome &&
           !session.needsLanguage &&
           (loc == _Routes.language ||
+              loc == _Routes.legalConsent ||
               loc == _Routes.kyc ||
               loc == _Routes.pending)) {
         return _Routes.home;

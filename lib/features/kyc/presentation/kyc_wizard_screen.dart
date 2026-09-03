@@ -42,8 +42,8 @@ class KycWizardScreen extends HookConsumerWidget {
     final aadhaarFront = useState<String?>(null);
     final aadhaarBack = useState<String?>(null);
     final aadhaarNumber = useTextEditingController();
+    final hasPan = useState(true);
     final panFront = useState<String?>(null);
-    final panBack = useState<String?>(null);
     final panNumber = useTextEditingController();
     final selfie = useState<String?>(null);
     // Stored values are private storage keys, which cannot be rendered
@@ -153,7 +153,9 @@ class KycWizardScreen extends HookConsumerWidget {
           }
           return true;
         case 2:
-          if (panFront.value == null || panBack.value == null) {
+          // A partner without a PAN must still be able to finish onboarding.
+          if (!hasPan.value) return true;
+          if (panFront.value == null) {
             error.value = ref.t('kyc.error.pan_photos_required');
             return false;
           }
@@ -227,9 +229,9 @@ class KycWizardScreen extends HookConsumerWidget {
           'aadhaarFrontUrl': aadhaarFront.value,
           'aadhaarBackUrl': aadhaarBack.value,
           'aadhaarNumber': KycInputs.bare(aadhaarNumber.text),
-          'panFrontUrl': panFront.value,
-          'panBackUrl': panBack.value,
-          'panNumber': panNumber.text.trim(),
+          'hasPan': hasPan.value,
+          if (hasPan.value) 'panFrontUrl': panFront.value,
+          if (hasPan.value) 'panNumber': panNumber.text.trim(),
           'selfieUrl': selfie.value,
           'bankAccountNumber': account.text.trim(),
           'bankIfsc': ifsc.text.trim(),
@@ -343,32 +345,39 @@ class KycWizardScreen extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Intro(text: ref.t('kyc.intro.pan')),
-              KycDocTile(
-                label: ref.t('kyc.doc.pan_front'),
-                hint: ref.t('kyc.doc.tap_to_upload'),
-                storageKey: panFront.value,
-                previewUrl: previews.value[panFront.value],
+              _NoPanCheckbox(
+                checked: !hasPan.value,
                 enabled: !busy.value,
-                onTap: () => pickAndUpload(panFront),
+                label: ref.t('kyc.pan.none'),
+                onChanged: (noPan) {
+                  hasPan.value = !noPan;
+                  if (noPan) {
+                    panFront.value = null;
+                    panNumber.clear();
+                    error.value = null;
+                  }
+                },
               ),
-              const SizedBox(height: XpertSpacing.sm),
-              KycDocTile(
-                label: ref.t('kyc.doc.pan_back'),
-                hint: ref.t('kyc.doc.tap_to_upload'),
-                storageKey: panBack.value,
-                previewUrl: previews.value[panBack.value],
-                enabled: !busy.value,
-                onTap: () => pickAndUpload(panBack),
-              ),
-              const SizedBox(height: XpertSpacing.lg),
-              AuthTextField(
-                label: ref.t('kyc.field.pan_number'),
-                controller: panNumber,
-                hint: ref.t('kyc.field.pan_hint'),
-                enabled: !busy.value,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: KycInputs.pan,
-              ),
+              if (hasPan.value) ...[
+                const SizedBox(height: XpertSpacing.md),
+                KycDocTile(
+                  label: ref.t('kyc.doc.pan_front'),
+                  hint: ref.t('kyc.doc.tap_to_upload'),
+                  storageKey: panFront.value,
+                  previewUrl: previews.value[panFront.value],
+                  enabled: !busy.value,
+                  onTap: () => pickAndUpload(panFront),
+                ),
+                const SizedBox(height: XpertSpacing.lg),
+                AuthTextField(
+                  label: ref.t('kyc.field.pan_number'),
+                  controller: panNumber,
+                  hint: ref.t('kyc.field.pan_hint'),
+                  enabled: !busy.value,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: KycInputs.pan,
+                ),
+              ],
             ],
           );
         case 3:
@@ -460,8 +469,7 @@ class KycWizardScreen extends HookConsumerWidget {
           final docsOk =
               aadhaarFront.value != null &&
               aadhaarBack.value != null &&
-              panFront.value != null &&
-              panBack.value != null;
+              (!hasPan.value || panFront.value != null);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -490,9 +498,12 @@ class KycWizardScreen extends HookConsumerWidget {
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.pan_number'),
-                    value: _orDash(panNumber.text.trim()),
+                    value: hasPan.value
+                        ? _orDash(panNumber.text.trim())
+                        : ref.t('kyc.pan.not_applicable'),
                     onEdit: () => step.value = 2,
-                    ok: KycInputs.panPattern.hasMatch(panNumber.text.trim()),
+                    ok: !hasPan.value ||
+                        KycInputs.panPattern.hasMatch(panNumber.text.trim()),
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.review.documents'),
@@ -605,6 +616,51 @@ String _orDash(String value) => value.isEmpty ? '—' : value;
 /// One sentence at the top of a step saying why it is being asked for. The
 /// wizard previously asked for photographs of government ID with no
 /// explanation at all.
+/// "I do not have a PAN card" — ticking it drops the PAN photo and number from
+/// the step entirely rather than leaving disabled fields on screen.
+class _NoPanCheckbox extends StatelessWidget {
+  const _NoPanCheckbox({
+    required this.checked,
+    required this.enabled,
+    required this.label,
+    required this.onChanged,
+  });
+
+  final bool checked;
+  final bool enabled;
+  final String label;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(XpertRadius.md),
+      onTap: enabled ? () => onChanged(!checked) : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: XpertSpacing.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Checkbox(
+              value: checked,
+              onChanged: enabled ? (v) => onChanged(v ?? false) : null,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: XpertSpacing.sm),
+            Expanded(
+              child: Text(
+                label,
+                style: XpertTypography.body.copyWith(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Intro extends StatelessWidget {
   const _Intro({required this.text});
 

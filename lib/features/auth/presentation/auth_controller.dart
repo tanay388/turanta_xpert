@@ -31,6 +31,10 @@ class Session {
 
   bool get needsLanguage => profile?.needsLanguage ?? true;
   bool get needsKyc => profile?.needsKyc ?? true;
+
+  /// Defaults false: a partner whose profile has not loaded should not be
+  /// pinned to the consent gate by a missing field.
+  bool get needsLegalAcceptance => profile?.needsLegalAcceptance ?? false;
   bool get isPendingApproval =>
       profile?.isPendingApproval == true && (profile?.kycComplete ?? false);
   bool get canUseHome =>

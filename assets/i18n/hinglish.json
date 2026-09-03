@@ -392,7 +392,6 @@
   "kyc.doc.aadhaar_front": "Aadhaar front",
   "kyc.doc.aadhaar_back": "Aadhaar back",
   "kyc.doc.pan_front": "PAN front",
-  "kyc.doc.pan_back": "PAN back",
   "kyc.doc.selfie": "Clear selfie",
   "kyc.field.full_name": "Pura naam",
   "kyc.field.select_dob": "Janm tithi chuno",
@@ -433,5 +432,15 @@
   "update.title": "Update zaroori hai",
   "update.body": "Turanta Xpert ka yeh version ab supported nahi hai. Jobs milte rehne ke liye latest version par update karein.",
   "update.cta": "Abhi update karein",
-  "login.rejected.hint": "Kripya ek valid Turanta Xpert account se sign in karein."
+  "login.rejected.hint": "Kripya ek valid Turanta Xpert account se sign in karein.",
+  "legal.consent.title": "Shuru karne se pehle",
+  "legal.consent.subtitle": "Har document kholkar padhein. Kuch bhi upload karne se pehle yeh ek baar karna hoga.",
+  "legal.consent.read": "Padh liya",
+  "legal.consent.tap_to_read": "Padhne ke liye tap karein",
+  "legal.consent.hint": "Aage badhne ke liye har document kholein",
+  "legal.consent.cta": "Main sehmat hoon, aage badhein",
+  "legal.consent.error": "Aapki sehmati record nahi ho saki. Dobara koshish karein.",
+  "legal.consent.load_error": "Documents load nahi ho sake. Apna connection check karein.",
+  "kyc.pan.none": "Mere paas PAN card nahi hai",
+  "kyc.pan.not_applicable": "Lagu nahi"
 }

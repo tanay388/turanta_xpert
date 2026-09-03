@@ -49,6 +49,55 @@ class LegalConsentDocuments {
   final LegalDocumentSummary? terms;
 }
 
+/// One document the partner must read and accept, with whether the version
+/// they signed is still the current one.
+class RequiredLegalDocument {
+  const RequiredLegalDocument({
+    required this.id,
+    required this.name,
+    required this.pdfUrl,
+    required this.version,
+    required this.accepted,
+  });
+
+  factory RequiredLegalDocument.fromJson(Map<String, dynamic> json) {
+    return RequiredLegalDocument(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      pdfUrl: json['pdfUrl'] as String,
+      version: json['version'] as String? ?? '',
+      accepted: json['accepted'] as bool? ?? false,
+    );
+  }
+
+  final int id;
+  final String name;
+  final String pdfUrl;
+  final String version;
+  final bool accepted;
+}
+
+class LegalAcceptanceStatus {
+  const LegalAcceptanceStatus({
+    required this.documents,
+    required this.allAccepted,
+  });
+
+  factory LegalAcceptanceStatus.fromJson(Map<String, dynamic> json) {
+    final raw = (json['documents'] as List<dynamic>? ?? const []);
+    return LegalAcceptanceStatus(
+      documents: raw
+          .cast<Map<String, dynamic>>()
+          .map(RequiredLegalDocument.fromJson)
+          .toList(),
+      allAccepted: json['allAccepted'] as bool? ?? false,
+    );
+  }
+
+  final List<RequiredLegalDocument> documents;
+  final bool allAccepted;
+}
+
 class LegalDocumentApi {
   LegalDocumentApi(this._dio);
   final Dio _dio;
@@ -72,6 +121,40 @@ class LegalDocumentApi {
     } on DioException catch (e) {
       throw ApiException(
         message: e.message ?? 'Failed to load documents',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Documents the partner must accept before onboarding continues.
+  Future<LegalAcceptanceStatus> requiredDocuments() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/partner/legal/documents');
+      return LegalAcceptanceStatus.fromJson(res.data ?? const {});
+    } on DioException catch (e) {
+      throw ApiException(
+        message: e.message ?? 'Failed to load documents',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Records acceptance. Device details are added server-side from the headers
+  /// [DeviceHeadersInterceptor] already attaches.
+  Future<LegalAcceptanceStatus> accept(List<int> documentIds) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/partner/legal/accept',
+        data: {'documentIds': documentIds},
+      );
+      return LegalAcceptanceStatus.fromJson(res.data ?? const {});
+    } on DioException catch (e) {
+      throw ApiException(
+        message: e.response?.data is Map
+            ? (e.response!.data['message']?.toString() ??
+                e.message ??
+                'Failed to record acceptance')
+            : e.message ?? 'Failed to record acceptance',
         statusCode: e.response?.statusCode,
       );
     }
@@ -106,4 +189,9 @@ final legalDocumentsProvider = FutureProvider.autoDispose<List<LegalDocumentSumm
 /// phone field, and the consent documents change about once a year.
 final legalConsentProvider = FutureProvider<LegalConsentDocuments>((ref) {
   return ref.watch(legalDocumentApiProvider).consent();
+});
+
+final requiredLegalDocumentsProvider =
+    FutureProvider.autoDispose<LegalAcceptanceStatus>((ref) {
+  return ref.watch(legalDocumentApiProvider).requiredDocuments();
 });

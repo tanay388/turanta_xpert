@@ -392,7 +392,6 @@
   "kyc.doc.aadhaar_front": "Aadhaar front",
   "kyc.doc.aadhaar_back": "Aadhaar back",
   "kyc.doc.pan_front": "PAN front",
-  "kyc.doc.pan_back": "PAN back",
   "kyc.doc.selfie": "Clear selfie",
   "kyc.field.full_name": "Full name",
   "kyc.field.select_dob": "Select date of birth",
@@ -433,5 +432,15 @@
   "update.title": "Update required",
   "update.body": "This version of Turanta Xpert is no longer supported. Please update to the latest version to keep receiving jobs.",
   "update.cta": "Update now",
-  "login.rejected.hint": "Please sign in with a valid Turanta Xpert account."
+  "login.rejected.hint": "Please sign in with a valid Turanta Xpert account.",
+  "legal.consent.title": "Before you start",
+  "legal.consent.subtitle": "Open and read each document. You only need to do this once, before uploading anything.",
+  "legal.consent.read": "Read",
+  "legal.consent.tap_to_read": "Tap to read",
+  "legal.consent.hint": "Open every document to continue",
+  "legal.consent.cta": "I agree and continue",
+  "legal.consent.error": "Couldn't record your agreement. Please try again.",
+  "legal.consent.load_error": "Couldn't load the documents. Check your connection.",
+  "kyc.pan.none": "I do not have a PAN card",
+  "kyc.pan.not_applicable": "Not applicable"
 }

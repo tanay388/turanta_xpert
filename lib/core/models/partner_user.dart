@@ -85,6 +85,7 @@ class PartnerUser {
     this.warehouseId,
     this.kycStatus,
     this.kycComplete = false,
+    this.needsLegalAcceptance = false,
     this.whatsappOptIn = true,
     this.pushOptIn = true,
   });
@@ -104,6 +105,10 @@ class PartnerUser {
   final int? warehouseId;
   final PartnerKycStatus? kycStatus;
   final bool kycComplete;
+
+  /// True while any active legal document is unread or was replaced since the
+  /// partner last accepted it.
+  final bool needsLegalAcceptance;
   final bool whatsappOptIn;
   final bool pushOptIn;
 
@@ -127,6 +132,8 @@ class PartnerUser {
       warehouseId: (json['warehouseId'] as num?)?.toInt(),
       kycStatus: kycStatusFromApi(json['kycStatus'] as String?),
       kycComplete: json['kycComplete'] as bool? ?? false,
+      needsLegalAcceptance:
+          json['needsLegalAcceptance'] as bool? ?? false,
       whatsappOptIn: json['whatsappOptIn'] as bool? ?? true,
       pushOptIn: json['pushOptIn'] as bool? ?? true,
     );
