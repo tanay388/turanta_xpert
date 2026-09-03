@@ -17,9 +17,18 @@ import 'shift_clock.dart';
 /// booleans. Everything it shows now comes from one [ShiftPhase], so the card
 /// cannot offer a check-in the server has already refused.
 class ShiftCard extends ConsumerWidget {
-  const ShiftCard({super.key, required this.attendance});
+  const ShiftCard({
+    super.key,
+    required this.attendance,
+    this.blockedByJob = false,
+  });
 
   final AttendanceState attendance;
+
+  /// A job is assigned or running, so the server will refuse check-out and
+  /// break-start. The card hides both rather than offering a button whose only
+  /// possible outcome is an error toast.
+  final bool blockedByJob;
 
   Future<void> _checkIn(BuildContext context, WidgetRef ref) async {
     final blocked = await ref.read(attendanceProvider.notifier).checkIn();
@@ -104,6 +113,8 @@ class ShiftCard extends ConsumerWidget {
 
     final subtitle = switch (phase) {
       ShiftPhase.onBreak => ref.t('home.break_in_progress_hint'),
+      // "Available for new jobs" is untrue while one is already in hand.
+      ShiftPhase.onShift when blockedByJob => ref.t('home.on_job_hint'),
       ShiftPhase.onShift => ref.t('home.online_hint'),
       ShiftPhase.complete => ref.t('home.completed_body'),
       ShiftPhase.missed => ref.t('home.shift_missed_body', {'hours': hours}),
@@ -211,38 +222,88 @@ class ShiftCard extends ConsumerWidget {
               child: Text(checkInLabel),
             )
           else if (isCheckedIn) ...[
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: XpertColors.danger,
-                foregroundColor: Colors.white,
+            if (blockedByJob)
+              _JobLockNote(text: ref.t('home.on_job_note'))
+            else ...[
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: XpertColors.danger,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: attendance.loading
+                    ? null
+                    : () => _checkOut(context, ref),
+                child: Text(ref.t('home.check_out')),
               ),
-              onPressed: attendance.loading
-                  ? null
-                  : () => _checkOut(context, ref),
-              child: Text(ref.t('home.check_out')),
-            ),
-            const SizedBox(height: XpertSpacing.md),
-            BreakControl(
-              isOnBreak: phase == ShiftPhase.onBreak,
-              breakUsed: attendance.breakUsed,
-              breakStartedAt:
-                  attendance.snapshot?.breakStartedAt ??
-                  DateTime.tryParse(
-                    ((attendance.breakSummary?['break']
-                                as Map<String, dynamic>?)?['startedAt'])
-                            ?.toString() ??
-                        '',
-                  ),
-              capMinutes:
-                  (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
-                  45,
-              fallbackRemainingSeconds:
-                  (attendance.breakSummary?['remainingSeconds'] as num?)
-                      ?.toInt(),
-              loading: attendance.loading,
-              onToggle: () => _toggleBreak(context, ref),
-            ),
+              const SizedBox(height: XpertSpacing.md),
+            ],
+            // Ending a break stays available even with a job in hand — the
+            // server guards only break *start*, and a partner handed a job
+            // mid-break has to be able to come back from it.
+            if (!blockedByJob || phase == ShiftPhase.onBreak) ...[
+              if (blockedByJob) const SizedBox(height: XpertSpacing.md),
+              BreakControl(
+                isOnBreak: phase == ShiftPhase.onBreak,
+                breakUsed: attendance.breakUsed,
+                breakStartedAt:
+                    attendance.snapshot?.breakStartedAt ??
+                    DateTime.tryParse(
+                      ((attendance.breakSummary?['break']
+                                  as Map<String, dynamic>?)?['startedAt'])
+                              ?.toString() ??
+                          '',
+                    ),
+                capMinutes:
+                    (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
+                    45,
+                fallbackRemainingSeconds:
+                    (attendance.breakSummary?['remainingSeconds'] as num?)
+                        ?.toInt(),
+                loading: attendance.loading,
+                onToggle: () => _toggleBreak(context, ref),
+              ),
+            ],
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Why the shift's buttons are gone. An empty space where a check-out button
+/// used to be reads as a bug; a line saying what unlocks it does not.
+class _JobLockNote extends StatelessWidget {
+  const _JobLockNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.md,
+        vertical: XpertSpacing.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: XpertColors.background,
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.lock_clock,
+            size: 18,
+            color: XpertColors.muted,
+          ),
+          const SizedBox(width: XpertSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: XpertTypography.caption.copyWith(
+                color: XpertColors.muted,
+              ),
+            ),
+          ),
         ],
       ),
     );

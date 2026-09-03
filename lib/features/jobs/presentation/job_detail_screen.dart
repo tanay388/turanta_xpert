@@ -102,6 +102,70 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     }
   }
 
+  /// How far from the customer's door a partner can be before starting the job
+  /// is worth questioning. Below this, ordinary GPS scatter accounts for the
+  /// gap on its own.
+  static const _startRadiusMetres = 100.0;
+
+  /// Asks before starting a job the partner does not appear to be standing at.
+  ///
+  /// Returns whether to go ahead. This is a check against starting the wrong
+  /// job, or starting one on the way to it — not an access control, so it
+  /// warns rather than blocks, and it stays silent when it has nothing solid
+  /// to compare: no fix, or a job with no coordinates. The OTP remains the
+  /// actual proof the partner is at the door.
+  Future<bool> _confirmStartAtDistance(PartnerJob job, Position? position) async {
+    final jobLat = job.latitude;
+    final jobLng = job.longitude;
+    if (position == null || jobLat == null || jobLng == null) return true;
+
+    final metres = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      jobLat,
+      jobLng,
+    );
+    if (metres <= _startRadiusMetres) return true;
+    if (!mounted) return false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(
+          Icons.wrong_location_outlined,
+          color: XpertColors.danger,
+        ),
+        title: Text(ref.t('jobs.start.far_title')),
+        content: Text(
+          ref.t('jobs.start.far_body', {'distance': _formatDistance(metres)}),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ref.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ref.t('jobs.start.far_confirm')),
+          ),
+        ],
+      ),
+    );
+    // Dismissing by tapping outside is not consent to start.
+    return confirmed ?? false;
+  }
+
+  /// Rounded to something a person standing in a street can act on — metres up
+  /// to a kilometre, then one decimal of a kilometre.
+  String _formatDistance(double metres) {
+    if (metres < 1000) {
+      return ref.t('common.distance_m', {'value': '${metres.round()}'});
+    }
+    return ref.t('common.distance_km', {
+      'value': (metres / 1000).toStringAsFixed(1),
+    });
+  }
+
   Future<void> _submit(PartnerJob job) async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != JobOtpField.length) {
@@ -122,6 +186,8 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       // OTP flow if permission/location is unavailable.
       final position = await _currentPosition();
       if (job.isAssigned) {
+        // Returning here still runs the finally below, which clears _busy.
+        if (!await _confirmStartAtDistance(job, position)) return;
         await api.start(
           job.id,
           otp,

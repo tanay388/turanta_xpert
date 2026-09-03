@@ -23,6 +23,34 @@ class JobsState {
     return jobs.first;
   }
 
+  /// The job actually running now — the one the partner is standing in front of.
+  PartnerJob? get ongoingJob {
+    for (final job in jobs) {
+      if (job.isInProgress) return job;
+    }
+    return null;
+  }
+
+  /// The soonest job that is not the one already running, so a screen showing
+  /// [ongoingJob] as its hero does not repeat it under "next job".
+  PartnerJob? get upcomingJob {
+    final ongoing = ongoingJob;
+    for (final job in jobs) {
+      if (job.id == ongoing?.id) continue;
+      return job;
+    }
+    return null;
+  }
+
+  /// Whether the server will refuse check-out and break-start right now.
+  ///
+  /// Mirrors JobGuardService.hasActiveOrPendingJob, which blocks on ASSIGNED
+  /// *or* IN_PROGRESS — so an assigned job that has not been started yet still
+  /// counts. Offering either action in this state produces a round trip whose
+  /// only outcome is an error toast.
+  bool get blocksShiftExit =>
+      jobs.any((j) => j.isAssigned || j.isInProgress);
+
   JobsState copyWith({
     List<PartnerJob>? jobs,
     bool? loading,

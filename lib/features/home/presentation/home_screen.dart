@@ -11,6 +11,7 @@ import '../../../core/theme/xpert_tokens.dart';
 import '../../jobs/presentation/jobs_controller.dart';
 import '../data/summary_api.dart';
 import 'availability_controller.dart';
+import 'widgets/active_job_card.dart';
 import 'widgets/home_header.dart';
 import 'widgets/home_nav_rows.dart';
 import 'widgets/next_job_card.dart';
@@ -61,8 +62,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final attendance = ref.watch(attendanceProvider);
     final jobsState = ref.watch(jobsProvider);
-    final nextJob = jobsState.nextJob;
-    final activeJobs = jobsState.jobs.length;
+    final ongoingJob = jobsState.ongoingJob;
+    final blockedByJob = jobsState.blocksShiftExit;
+    // Once the running job is the hero, the next-job slot shows what comes
+    // after it instead of printing the same job twice.
+    final nextJob =
+        ongoingJob == null ? jobsState.nextJob : jobsState.upcomingJob;
+    final shown = (ongoingJob == null ? 0 : 1) + (nextJob == null ? 0 : 1);
+    final extraCount = (jobsState.jobs.length - shown).clamp(0, 99);
 
     // The app's AppBarTheme asks for dark status-bar icons, which is right for
     // every other screen and invisible against this one's dark header. With no
@@ -105,20 +112,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       XpertSpacing.xxl,
                     ),
                     children: [
-                      ShiftCard(attendance: attendance),
+                      // A job in progress outranks the shift: it leads, and
+                      // the shift card drops under it.
+                      if (ongoingJob != null) ...[
+                        _SectionLabel(text: ref.t('jobs.home.ongoing_title')),
+                        const SizedBox(height: XpertSpacing.sm),
+                        ActiveJobCard(job: ongoingJob),
+                        const SizedBox(height: XpertSpacing.xl),
+                      ],
+                      ShiftCard(
+                        attendance: attendance,
+                        blockedByJob: blockedByJob,
+                      ),
                       const SizedBox(height: XpertSpacing.xl),
                       _SectionLabel(text: ref.t('home.today.title')),
                       const SizedBox(height: XpertSpacing.sm),
                       const TodayCard(),
                       const SizedBox(height: XpertSpacing.xl),
-                      _SectionLabel(text: ref.t('jobs.home.next_title')),
-                      const SizedBox(height: XpertSpacing.sm),
-                      NextJobCard(
-                        job: nextJob,
-                        loading: jobsState.loading && nextJob == null,
-                        extraCount: activeJobs > 1 ? activeJobs - 1 : 0,
-                      ),
-                      const SizedBox(height: XpertSpacing.xl),
+                      // With a live job on screen the empty "no jobs yet" slot
+                      // says nothing worth a section header of its own.
+                      if (ongoingJob == null || nextJob != null) ...[
+                        _SectionLabel(text: ref.t('jobs.home.next_title')),
+                        const SizedBox(height: XpertSpacing.sm),
+                        NextJobCard(
+                          job: nextJob,
+                          loading: jobsState.loading && nextJob == null,
+                          extraCount: extraCount,
+                        ),
+                        const SizedBox(height: XpertSpacing.xl),
+                      ],
                       const HomeNavRows(),
                     ],
                   ),
