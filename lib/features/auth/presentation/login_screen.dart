@@ -30,6 +30,26 @@ class LoginScreen extends HookConsumerWidget {
     final showReferral = useState(false);
     final isBusy = state is OtpSending;
 
+    final rejection = ref.watch(authRejectionProvider);
+    useEffect(() {
+      if (rejection == null) return null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              backgroundColor: XpertColors.danger,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+              content: Text('$rejection\n${ref.t('login.rejected.hint')}'),
+            ),
+          );
+        ref.read(authRejectionProvider.notifier).state = null;
+      });
+      return null;
+    }, [rejection]);
+
     useEffect(() {
       if (state is OtpCodeSent) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

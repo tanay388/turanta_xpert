@@ -14,18 +14,17 @@ import '../data/partner_auth_api.dart';
 /// after.
 final pendingReferralCodeProvider = StateProvider<String?>((ref) => null);
 
+/// Why a signed-in Firebase identity was rejected by the backend — a customer
+/// number used on Xpert, or an account bound to another handset. The session is
+/// torn down immediately in both cases, so this is the only surviving trace;
+/// the login screen shows it once and clears it.
+final authRejectionProvider = StateProvider<String?>((ref) => null);
+
 class Session {
-  const Session({
-    required this.firebaseUser,
-    this.profile,
-    this.deviceMismatch = false,
-    this.deviceMismatchMessage,
-  });
+  const Session({required this.firebaseUser, this.profile});
 
   final fb.User firebaseUser;
   final PartnerUser? profile;
-  final bool deviceMismatch;
-  final String? deviceMismatchMessage;
 
   String get phone => firebaseUser.phoneNumber ?? profile?.phone ?? '';
   String get uid => firebaseUser.uid;
@@ -37,17 +36,10 @@ class Session {
   bool get canUseHome =>
       profile?.isActive == true && profile?.kycComplete == true;
 
-  Session copyWith({
-    PartnerUser? profile,
-    bool? deviceMismatch,
-    String? deviceMismatchMessage,
-  }) {
+  Session copyWith({PartnerUser? profile}) {
     return Session(
       firebaseUser: firebaseUser,
       profile: profile ?? this.profile,
-      deviceMismatch: deviceMismatch ?? this.deviceMismatch,
-      deviceMismatchMessage:
-          deviceMismatchMessage ?? this.deviceMismatchMessage,
     );
   }
 }
@@ -101,7 +93,7 @@ class AuthController extends AsyncNotifier<Session?> {
     }
   }
 
-  Future<Session> _resolve(fb.User user) async {
+  Future<Session?> _resolve(fb.User user) async {
     final api = ref.read(partnerAuthApiProvider);
     try {
       final referralCode = ref.read(pendingReferralCodeProvider);
@@ -116,12 +108,12 @@ class AuthController extends AsyncNotifier<Session?> {
       unawaited(_syncPushToken());
       return Session(firebaseUser: user, profile: profile);
     } on ApiException catch (e) {
-      if (e.code == 'DEVICE_MISMATCH') {
-        return Session(
-          firebaseUser: user,
-          deviceMismatch: true,
-          deviceMismatchMessage: e.message,
-        );
+      // Neither is recoverable by retrying, and both used to strand the user on
+      // a screen with no way back to login. Drop the session instead.
+      if (e.code == 'ROLE_CONFLICT' || e.code == 'DEVICE_MISMATCH') {
+        ref.read(authRejectionProvider.notifier).state = e.message;
+        await fb.FirebaseAuth.instance.signOut();
+        return null;
       }
       rethrow;
     }
@@ -142,9 +134,7 @@ class AuthController extends AsyncNotifier<Session?> {
     if (current == null) return;
     final profile = await ref.read(partnerAuthApiProvider).getMe();
     await ref.read(localeProvider.notifier).syncFromProfile(profile.language);
-    state = AsyncData(
-      current.copyWith(profile: profile, deviceMismatch: false),
-    );
+    state = AsyncData(current.copyWith(profile: profile));
   }
 
   Future<void> signOut() async {

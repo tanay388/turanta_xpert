@@ -128,10 +128,6 @@
   "pending.stage.approved.body": "Approval ke baad check in karo aur jobs aana shuru ho jayenge.",
   "pending.check": "Status check karo",
   "pending.sign_out": "Sign out",
-  "device.title": "Device allow nahi hai",
-  "device.body": "Yeh partner account kisi aur phone pe already registered hai.",
-  "device.support": "Device reset ke liye Turanta support se contact karo.",
-  "device.sign_out": "Sign out",
   "home.title": "Turanta Xpert",
   "home.today.title": "Aaj",
   "home.today.earned": "Aaj ki kamai",
@@ -436,5 +432,6 @@
   "splash.tagline": "Apne time par kamao.",
   "update.title": "Update zaroori hai",
   "update.body": "Turanta Xpert ka yeh version ab supported nahi hai. Jobs milte rehne ke liye latest version par update karein.",
-  "update.cta": "Abhi update karein"
+  "update.cta": "Abhi update karein",
+  "login.rejected.hint": "Kripya ek valid Turanta Xpert account se sign in karein."
 }

@@ -128,10 +128,6 @@
   "pending.stage.approved.body": "Once approved, check in and jobs start coming to you.",
   "pending.check": "Check status",
   "pending.sign_out": "Sign out",
-  "device.title": "Device not allowed",
-  "device.body": "This partner account is already registered on another phone.",
-  "device.support": "Contact Turanta support to reset your registered device.",
-  "device.sign_out": "Sign out",
   "home.title": "Turanta Xpert",
   "home.today.title": "Today",
   "home.today.earned": "Earned today",
@@ -436,5 +432,6 @@
   "splash.tagline": "Earn on your schedule.",
   "update.title": "Update required",
   "update.body": "This version of Turanta Xpert is no longer supported. Please update to the latest version to keep receiving jobs.",
-  "update.cta": "Update now"
+  "update.cta": "Update now",
+  "login.rejected.hint": "Please sign in with a valid Turanta Xpert account."
 }

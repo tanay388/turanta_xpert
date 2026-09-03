@@ -57,7 +57,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   String _destinationFor(Session session) {
-    if (session.deviceMismatch) return '/device-blocked';
     if (session.needsLanguage) return '/language';
     if (session.needsKyc) return '/kyc';
     if (session.isPendingApproval || !session.canUseHome) {

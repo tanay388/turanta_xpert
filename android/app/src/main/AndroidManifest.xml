@@ -10,7 +10,7 @@
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDftOvtwVvEYo2CXjbZEVIWzI4IdTI-0ro"/>
+            android:value="AIzaSyBCGOpgN9tGj2iFJOVfbnB9rh1rCaY6jgA"/>
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_final_notification"/>

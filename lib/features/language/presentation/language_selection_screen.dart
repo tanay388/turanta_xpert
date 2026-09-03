@@ -76,9 +76,7 @@ class _LanguageSelectionScreenState
         context.go('/login');
         return;
       }
-      if (session.deviceMismatch) {
-        context.go('/device-blocked');
-      } else if (session.needsKyc) {
+      if (session.needsKyc) {
         context.go('/kyc');
       } else if (session.isPendingApproval || !session.canUseHome) {
         context.go('/pending-approval');

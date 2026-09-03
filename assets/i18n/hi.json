@@ -128,10 +128,6 @@
   "pending.stage.approved.body": "मंज़ूरी के बाद चेक इन करें और काम आना शुरू हो जाएगा।",
   "pending.check": "स्थिति जाँचें",
   "pending.sign_out": "साइन आउट",
-  "device.title": "डिवाइस अनुमति नहीं",
-  "device.body": "यह पार्टनर खाता किसी अन्य फ़ोन पर पहले से पंजीकृत है।",
-  "device.support": "डिवाइस रीसेट के लिए टुरांता सपोर्ट से संपर्क करें।",
-  "device.sign_out": "साइन आउट",
   "home.title": "टुरांता एक्सपर्ट",
   "home.today.title": "आज",
   "home.today.earned": "आज की कमाई",
@@ -436,5 +432,6 @@
   "splash.tagline": "Apni marzi ke waqt par kamayein.",
   "update.title": "अपडेट ज़रूरी है",
   "update.body": "Turanta Xpert का यह वर्ज़न अब समर्थित नहीं है। जॉब्स पाते रहने के लिए कृपया नवीनतम वर्ज़न पर अपडेट करें।",
-  "update.cta": "अभी अपडेट करें"
+  "update.cta": "अभी अपडेट करें",
+  "login.rejected.hint": "कृपया वैध Turanta Xpert खाते से साइन इन करें।"
 }

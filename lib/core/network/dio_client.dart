@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:talker/talker.dart';
 import 'package:talker_dio_logger/talker_dio_logger.dart';
+import 'retry_interceptor.dart';
+import 'crash_reporting_interceptor.dart';
 
 import '../config/keys.dart';
 import '../device/device_info_service.dart';
@@ -122,6 +124,8 @@ final dioProvider = Provider<Dio>((ref) {
   );
   dio.interceptors.add(DeviceHeadersInterceptor(deviceInfo));
   dio.interceptors.add(FirebaseAuthInterceptor(FirebaseAuth.instance));
+  dio.interceptors.add(RetryInterceptor());
+  dio.interceptors.add(CrashReportingInterceptor());
   dio.interceptors.add(createHttpLogger());
   return dio;
 });

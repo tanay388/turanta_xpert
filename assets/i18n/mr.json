@@ -128,10 +128,6 @@
   "pending.stage.approved.body": "मंजुरीनंतर चेक इन करा आणि कामे येऊ लागतील.",
   "pending.check": "स्थिती तपासा",
   "pending.sign_out": "साइन आउट",
-  "device.title": "डिव्हाइस अनुमत नाही",
-  "device.body": "हे पार्टनर खाते दुसऱ्या फोनवर आधीच नोंदणीकृत आहे.",
-  "device.support": "डिव्हाइस रीसेटसाठी टुरांता सपोर्टशी संपर्क साधा.",
-  "device.sign_out": "साइन आउट",
   "home.title": "टुरांता एक्सपर्ट",
   "home.today.title": "आज",
   "home.today.earned": "आजची कमाई",
@@ -436,5 +432,6 @@
   "splash.tagline": "Tumchya vela pramane kamva.",
   "update.title": "अपडेट आवश्यक आहे",
   "update.body": "Turanta Xpert ची ही आवृत्ती आता समर्थित नाही. जॉब्स मिळत राहण्यासाठी कृपया नवीनतम आवृत्तीवर अपडेट करा.",
-  "update.cta": "आत्ता अपडेट करा"
+  "update.cta": "आत्ता अपडेट करा",
+  "login.rejected.hint": "कृपया वैध Turanta Xpert खात्याने साइन इन करा."
 }

@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../features/auth/presentation/auth_controller.dart';
-import '../features/auth/presentation/device_blocked_screen.dart';
 import '../features/auth/presentation/update_required_screen.dart';
 import '../core/network/app_version_gate.dart';
 import '../features/auth/presentation/login_screen.dart';
@@ -36,7 +35,6 @@ class _Routes {
   static const language = '/language';
   static const kyc = '/kyc';
   static const pending = '/pending-approval';
-  static const deviceBlocked = '/device-blocked';
   static const home = '/home';
   static const leave = '/leave';
   static const attendance = '/attendance';
@@ -62,7 +60,6 @@ class _Routes {
 }
 
 String? _postAuthDestination(Session session) {
-  if (session.deviceMismatch) return _Routes.deviceBlocked;
   if (session.needsLanguage) return _Routes.language;
   if (session.needsKyc) return _Routes.kyc;
   if (session.isPendingApproval || !session.canUseHome) return _Routes.pending;
@@ -91,10 +88,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _Routes.pending,
         builder: (_, _) => const PendingApprovalScreen(),
-      ),
-      GoRoute(
-        path: _Routes.deviceBlocked,
-        builder: (_, _) => const DeviceBlockedScreen(),
       ),
       GoRoute(
         path: '/update-required',
@@ -230,25 +223,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         return dest;
       }
 
-      if (session.deviceMismatch && loc != _Routes.deviceBlocked) {
-        return _Routes.deviceBlocked;
-      }
-
-      if (!session.deviceMismatch &&
-          session.needsLanguage &&
-          loc != _Routes.language) {
+      if (session.needsLanguage && loc != _Routes.language) {
         return _Routes.language;
       }
 
-      if (!session.deviceMismatch &&
-          !session.needsLanguage &&
-          session.needsKyc &&
-          loc != _Routes.kyc) {
+      if (!session.needsLanguage && session.needsKyc && loc != _Routes.kyc) {
         return _Routes.kyc;
       }
 
-      if (!session.deviceMismatch &&
-          !session.needsLanguage &&
+      if (!session.needsLanguage &&
           !session.needsKyc &&
           !session.canUseHome &&
           loc != _Routes.pending) {
@@ -259,8 +242,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           !session.needsLanguage &&
           (loc == _Routes.language ||
               loc == _Routes.kyc ||
-              loc == _Routes.pending ||
-              loc == _Routes.deviceBlocked)) {
+              loc == _Routes.pending)) {
         return _Routes.home;
       }
 
