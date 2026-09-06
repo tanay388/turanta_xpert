@@ -40,6 +40,7 @@ class JobDetailScreen extends ConsumerStatefulWidget {
 class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   final _otpCtrl = TextEditingController();
   bool _busy = false;
+  bool _calling = false;
   bool _otpError = false;
   Timer? _pollTimer;
   StreamSubscription<JobLifecycleEvent>? _lifecycleSub;
@@ -261,12 +262,51 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
-  Future<void> _call(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'\s+'), ''));
-    if (!await launchUrl(uri) && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(ref.t('jobs.call.failed'))));
+  /// Nothing is dialled from the handset. The backend asks Exotel to ring this
+  /// phone first and then bridge the customer in, so neither side sees the
+  /// other's number — which is also why this confirms first: without it the
+  /// phone would simply ring a few seconds after a tap that looked inert.
+  Future<void> _call() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.call_rounded, color: XpertColors.success),
+        title: Text(ref.t('jobs.call.title')),
+        content: Text(ref.t('jobs.call.body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ref.t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ref.t('jobs.call.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _calling = true);
+    try {
+      final result = await ref
+          .read(jobsApiProvider)
+          .requestCustomerCall(widget.jobId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.t('jobs.call.placed', {'number': result.displayNumber}),
+          ),
+        ),
+      );
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_dioMessage(e) ?? ref.t('jobs.call.failed'))),
+      );
+    } finally {
+      if (mounted) setState(() => _calling = false);
     }
   }
 
@@ -310,6 +350,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   job: job,
                   onNavigate: () => _openMaps(job),
                   onCall: _call,
+                  calling: _calling,
                 ),
               ),
             ),
@@ -336,15 +377,16 @@ class _Body extends ConsumerWidget {
     required this.job,
     required this.onNavigate,
     required this.onCall,
+    required this.calling,
   });
 
   final PartnerJob job;
   final VoidCallback onNavigate;
-  final Future<void> Function(String phone) onCall;
+  final VoidCallback? onCall;
+  final bool calling;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phone = (job.customerPhone ?? '').trim();
     final customer = (job.customerName ?? '').trim();
     final address = job.displayAddress;
     final hasMap = job.latitude != null && job.longitude != null;
@@ -416,14 +458,17 @@ class _Body extends ConsumerWidget {
             ),
           ],
         ),
-        if (customer.isNotEmpty || phone.isNotEmpty) ...[
+        // Calling is bridged server-side and only while the job is live, so
+        // the card earns its place when there is a name to show or a call to
+        // place — not on a closed job with a masked customer.
+        if (customer.isNotEmpty || job.isAssigned || job.isInProgress) ...[
           const SizedBox(height: XpertSpacing.xl),
           SectionLabel(ref.t('jobs.customer')),
           const SizedBox(height: XpertSpacing.sm),
           _ContactCard(
             name: customer.isEmpty ? ref.t('jobs.customer') : customer,
-            phone: phone,
-            onCall: phone.isEmpty ? null : () => onCall(phone),
+            onCall: (job.isAssigned || job.isInProgress) ? onCall : null,
+            calling: calling,
           ),
         ],
         // Only while there is still somewhere to go. Once a job is closed the
@@ -542,18 +587,19 @@ class _Metric extends StatelessWidget {
   }
 }
 
-/// The customer, with a way to reach them. Calling was the gap: the number was
-/// printed as text and a partner at a locked gate had to retype it.
+/// The customer, with a way to reach them. The number itself is deliberately
+/// absent: calls are bridged through the Turanta line, so a partner never sees
+/// (or keeps) a customer's personal number.
 class _ContactCard extends ConsumerWidget {
   const _ContactCard({
     required this.name,
-    required this.phone,
     required this.onCall,
+    required this.calling,
   });
 
   final String name;
-  final String phone;
   final VoidCallback? onCall;
+  final bool calling;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -592,10 +638,10 @@ class _ContactCard extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (phone.isNotEmpty) ...[
+                if (onCall != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    phone,
+                    ref.t('jobs.customer.number_private'),
                     style: XpertTypography.metric.copyWith(
                       fontSize: 13,
                       color: XpertColors.muted,
@@ -615,15 +661,26 @@ class _ContactCard extends ConsumerWidget {
                 shape: const CircleBorder(),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: onCall,
-                  child: const SizedBox(
+                  onTap: calling ? null : onCall,
+                  child: SizedBox(
                     width: 44,
                     height: 44,
-                    child: Icon(
-                      Icons.call_rounded,
-                      size: 20,
-                      color: XpertColors.success,
-                    ),
+                    child: calling
+                        ? const Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: XpertColors.success,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.call_rounded,
+                            size: 20,
+                            color: XpertColors.success,
+                          ),
                   ),
                 ),
               ),

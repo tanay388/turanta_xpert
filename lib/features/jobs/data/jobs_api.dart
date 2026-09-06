@@ -178,6 +178,21 @@ class PartnerJob {
   }
 }
 
+/// Outcome of `POST /partner/calls/jobs/:id` — the partner's own phone rings
+/// first, then Exotel bridges the customer in.
+class CallRequestResult {
+  const CallRequestResult({required this.displayNumber});
+
+  /// The Turanta number both handsets show instead of a personal number.
+  final String displayNumber;
+
+  factory CallRequestResult.fromJson(Map<String, dynamic> json) {
+    return CallRequestResult(
+      displayNumber: (json['displayNumber'] as String?)?.trim() ?? '',
+    );
+  }
+}
+
 /// One page of completed-job history + the cursor for the next page (null = end).
 class JobHistoryPage {
   const JobHistoryPage({required this.items, this.nextCursor});
@@ -257,6 +272,16 @@ class JobsApi {
       },
     );
     return PartnerJob.fromJson(res.data ?? const {});
+  }
+
+  /// Bridge a masked call to the customer. Nothing is dialled from the
+  /// handset — the backend rings this phone first, so neither party sees the
+  /// other's number.
+  Future<CallRequestResult> requestCustomerCall(int id) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/partner/calls/jobs/$id',
+    );
+    return CallRequestResult.fromJson(res.data ?? const {});
   }
 }
 

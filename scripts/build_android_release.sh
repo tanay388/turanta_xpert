@@ -26,19 +26,40 @@ fi
 
 # Stale Gradle daemons on Apple Silicon can JVM-crash mid-release
 # ("Field too big for insn" / daemon disappeared). Start clean.
-echo "Stopping Gradle daemons…"
-(cd android && ./gradlew --stop >/dev/null 2>&1) || true
-rm -f android/hs_err_pid*.log
+stop_gradle_daemons() {
+  echo "Stopping Gradle daemons…"
+  (cd android && ./gradlew --stop) || true
+  rm -f android/hs_err_pid*.log
+  # Let the daemon registry finish processing --stop before bundleRelease starts.
+  sleep 2
+}
+
+# Retry once on transient "daemon has been stopped" failures.
+run_flutter_build() {
+  local attempt
+  for attempt in 1 2; do
+    if "$@"; then
+      return 0
+    fi
+    if (( attempt == 1 )); then
+      echo "Build failed; waiting for Gradle to settle, then retrying…"
+      sleep 3
+    fi
+  done
+  return 1
+}
+
+stop_gradle_daemons
 
 build_aab() {
   echo "Building signed App Bundle (Play Store)…"
-  flutter build appbundle --release
+  run_flutter_build flutter build appbundle --release
   echo "  → build/app/outputs/bundle/release/app-release.aab"
 }
 
 build_apk() {
   echo "Building signed APK…"
-  flutter build apk --release
+  run_flutter_build flutter build apk --release
   echo "  → build/app/outputs/flutter-apk/app-release.apk"
 }
 

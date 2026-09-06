@@ -110,8 +110,27 @@ void main() {
     expect(find.byIcon(Icons.call_rounded), findsOneWidget);
   });
 
-  testWidgets('no call button when there is no number', (tester) async {
+  testWidgets('calling no longer depends on holding the number', (
+    tester,
+  ) async {
     await _pump(tester, job: _job(phone: null));
+
+    // The call is bridged server-side, so a masked job still offers one.
+    expect(find.byIcon(Icons.call_rounded), findsOneWidget);
+  });
+
+  testWidgets('the customer number is never printed', (tester) async {
+    await _pump(tester, job: _job());
+
+    expect(find.text('+919876543210'), findsNothing);
+    expect(
+      find.text('Number hidden — calls connect through Turanta'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a finished job offers no call', (tester) async {
+    await _pump(tester, job: _job(status: 'COMPLETED'));
 
     expect(find.byIcon(Icons.call_rounded), findsNothing);
   });
