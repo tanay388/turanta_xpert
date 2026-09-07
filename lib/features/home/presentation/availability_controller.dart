@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -135,11 +136,15 @@ class AttendanceState {
 
 class AttendanceController extends Notifier<AttendanceState> {
   Timer? _pingTimer;
+  StreamSubscription<Position>? _positionSub;
   final _battery = Battery();
 
   @override
   AttendanceState build() {
-    ref.onDispose(() => _pingTimer?.cancel());
+    ref.onDispose(() {
+      _pingTimer?.cancel();
+      _positionSub?.cancel();
+    });
     Future.microtask(refresh);
     return const AttendanceState(loading: true);
   }
@@ -213,6 +218,13 @@ class AttendanceController extends Notifier<AttendanceState> {
         timeLimit: Duration(seconds: 15),
       ),
     );
+  }
+
+  /// What the OS says about us right now, rather than a hopeful constant.
+  String _appState() {
+    final lifecycle =
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+    return lifecycle == AppLifecycleState.resumed ? 'FOREGROUND' : 'BACKGROUND';
   }
 
   Future<int?> _batteryLevel() async {
@@ -317,20 +329,75 @@ class AttendanceController extends Notifier<AttendanceState> {
     }
   }
 
+  /// Keeps the shift heartbeat alive while the phone is in a pocket.
+  ///
+  /// This used to be a bare `Timer.periodic`, which iOS suspends and Android
+  /// Doze kills the moment the app leaves the foreground. Partners were
+  /// checking in, pocketing the phone, and vanishing from dispatch inside four
+  /// minutes while still showing as available — on 6 Sep that left paid
+  /// bookings unassigned with free partners on shift.
+  ///
+  /// The stream runs under a foreground service on Android and background
+  /// location updates on iOS, so it survives. The timer stays as a backstop
+  /// because a stationary phone produces no location events at all.
   void _syncPingLoop(AttendanceSnapshot snap) {
     _pingTimer?.cancel();
+    _positionSub?.cancel();
+    _positionSub = null;
+
     if (!snap.isCheckedIn || snap.sessionId == null) return;
+
     final interval = Duration(seconds: snap.pingIntervalSeconds.clamp(30, 300));
     _pingTimer = Timer.periodic(interval, (_) => _sendPing());
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: _shiftLocationSettings(interval),
+    ).listen(
+      (position) => unawaited(_sendPing(position: position)),
+      onError: (Object err) => debugPrint('shift location stream: $err'),
+    );
     unawaited(_sendPing());
   }
 
-  Future<void> _sendPing() async {
+  LocationSettings _shiftLocationSettings(Duration interval) {
+    if (Platform.isAndroid) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        // Time-based, not distance-based: a partner waiting at a doorstep is
+        // still on shift and must keep reporting.
+        distanceFilter: 0,
+        intervalDuration: interval,
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'On shift with Turanta',
+          notificationText: 'Sharing your location so jobs can reach you.',
+          notificationChannelName: 'Shift location',
+          enableWakeLock: true,
+          setOngoing: true,
+        ),
+      );
+    }
+    if (Platform.isIOS) {
+      return AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+        allowBackgroundLocationUpdates: true,
+        // iOS pauses updates when it decides the user has settled, which is
+        // exactly when a partner is waiting to be given a job.
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+      );
+    }
+    return const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+    );
+  }
+
+  Future<void> _sendPing({Position? position}) async {
     final snap = state.snapshot;
     final sessionId = snap?.sessionId;
     if (snap == null || !snap.isCheckedIn || sessionId == null) return;
     try {
-      final pos = await _position();
+      final pos = position ?? await _position();
       if (pos == null) return;
       final updated = await _api.ping(
         attendanceSessionId: sessionId,
@@ -339,7 +406,9 @@ class AttendanceController extends Notifier<AttendanceState> {
         gpsAccuracy: pos.accuracy,
         batteryPercentage: await _batteryLevel(),
         networkType: await _networkType(),
-        appState: 'FOREGROUND',
+        // Reported honestly: the server uses it to tell a quiet app apart
+        // from a quiet partner.
+        appState: _appState(),
       );
       // Pick up newly assigned jobs without leaving home.
       unawaited(ref.read(jobsProvider.notifier).refresh(silent: true));

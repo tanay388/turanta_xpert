@@ -49,7 +49,9 @@
 		<array>
 			<string>fetch</string>
 			<string>remote-notification</string>
-		</array>
+		
+		<string>location</string>
+	</array>
 		<!-- Required for Firebase Phone Auth (reCAPTCHA redirect on iOS / Simulator) -->
 		<key>CFBundleURLTypes</key>
 		<array>
