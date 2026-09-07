@@ -19,9 +19,17 @@ import '../availability_controller.dart';
 /// already exists in both Profile and Settings, so it is gone from here: a
 /// destructive action does not belong next to a panic button.
 class HomeHeader extends ConsumerWidget {
-  const HomeHeader({super.key, required this.onEmergency});
+  const HomeHeader({
+    super.key,
+    required this.onEmergency,
+    required this.showEmergency,
+  });
 
   final VoidCallback onEmergency;
+
+  /// SOS is a shift-time affordance: off shift there is no live location and
+  /// no job for ops to act on, so the button is absent rather than inert.
+  final bool showEmergency;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -78,7 +86,11 @@ class HomeHeader extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: XpertSpacing.sm),
-              _EmergencyButton(onTap: onEmergency, label: ref.t('home.emergency')),
+              if (showEmergency)
+                _EmergencyButton(
+                  onTap: onEmergency,
+                  label: ref.t('home.emergency'),
+                ),
             ],
           ),
         ),

@@ -8,6 +8,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../home/presentation/availability_controller.dart';
+import '../../sos/presentation/sos_prompt.dart';
+
 import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/notifications/push_notification_service.dart';
@@ -319,7 +322,19 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
     return Scaffold(
       backgroundColor: XpertColors.background,
-      appBar: AppBar(title: Text(ref.t('jobs.detail.title'))),
+      appBar: AppBar(
+        title: Text(ref.t('jobs.detail.title')),
+        actions: [
+          // This screen is pushed over the shell, so the Home header's SOS is
+          // unreachable from exactly where a helper is most likely to need it.
+          if (ref.watch(attendanceProvider).isCheckedIn)
+            IconButton(
+              onPressed: () => showSosPrompt(context, ref),
+              icon: const Icon(Icons.sos_rounded, color: XpertColors.danger),
+              tooltip: ref.t('home.emergency'),
+            ),
+        ],
+      ),
       body: asyncJob.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         // A bare centred sentence with no way to try again.

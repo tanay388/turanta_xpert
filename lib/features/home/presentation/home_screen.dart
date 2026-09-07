@@ -9,6 +9,9 @@ import '../../../core/i18n/context_t.dart';
 import '../../../core/notifications/pending_deep_link.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../jobs/presentation/jobs_controller.dart';
+import '../../sos/presentation/sos_controller.dart';
+import '../../sos/presentation/sos_prompt.dart';
+import '../../sos/presentation/widgets/sos_active_card.dart';
 import '../data/summary_api.dart';
 import 'availability_controller.dart';
 import 'widgets/active_job_card.dart';
@@ -39,6 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final jobs = ref.read(jobsProvider.notifier);
       jobs.refresh();
       jobs.startPolling();
+      unawaited(ref.read(sosProvider.notifier).refresh());
       _consumeDeepLink();
     });
   }
@@ -84,7 +88,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: XpertColors.canvas,
         body: Column(
           children: [
-            HomeHeader(onEmergency: () => _showEmergencySheet(context, ref)),
+            HomeHeader(
+              onEmergency: () => showSosPrompt(context, ref),
+              showEmergency: ref.watch(attendanceProvider).isCheckedIn,
+            ),
+            if (ref.watch(sosProvider).phase != SosPhase.idle)
+              const SosActiveCard(),
             // The sheet rises over the header's dark field, the same join the
             // sign-in screen makes. It also owns the scroll, so the header stays
             // put while the day's content moves under it.
@@ -149,33 +158,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _showEmergencySheet(BuildContext context, WidgetRef ref) async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.sos_rounded, color: XpertColors.danger),
-        title: Text(ref.t('home.emergency')),
-        content: Text(ref.t('home.emergency_body')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(ref.t('home.emergency_cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: XpertColors.danger),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ref.t('home.emergency_sent'))),
-              );
-            },
-            child: Text(ref.t('home.emergency_confirm')),
-          ),
-        ],
       ),
     );
   }

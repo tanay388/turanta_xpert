@@ -84,7 +84,7 @@ Future<void> _pump(
         home: Scaffold(
           body: ListView(
             children: [
-              HomeHeader(onEmergency: () {}),
+              HomeHeader(onEmergency: () {}, showEmergency: true),
               ShiftCard(attendance: attendance),
               const TodayCard(),
             ],
