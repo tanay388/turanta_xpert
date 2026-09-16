@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/models/partner_break.dart';
 import '../../../core/models/partner_shift.dart';
 import '../../../core/network/dio_client.dart';
 
@@ -12,6 +13,7 @@ class CurrentShiftPayload {
     required this.scheduledEndAt,
     required this.allowedCheckinFrom,
     required this.canCheckIn,
+    this.partnerBreak,
     this.warehouseId,
     this.warehouseName,
     this.dayStatus,
@@ -26,6 +28,9 @@ class CurrentShiftPayload {
   final DateTime scheduledEndAt;
   final DateTime allowedCheckinFrom;
   final bool canCheckIn;
+
+  /// This partner's break, or null when the server has not given one.
+  final PartnerBreak? partnerBreak;
   final int? warehouseId;
   final String? warehouseName;
   final String? dayStatus;
@@ -63,6 +68,7 @@ class CurrentShiftPayload {
       scheduledEndAt: DateTime.parse(json['scheduledEndAt'] as String),
       allowedCheckinFrom: DateTime.parse(json['allowedCheckinFrom'] as String),
       canCheckIn: json['canCheckIn'] as bool? ?? false,
+      partnerBreak: PartnerBreak.fromJson(json['break']),
       warehouseId: (json['warehouseId'] as num?)?.toInt(),
       warehouseName: json['warehouseName'] as String?,
       dayStatus: json['dayStatus'] as String?,

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/i18n/context_t.dart';
-import '../../../../core/models/partner_shift.dart';
+import '../../../../core/models/partner_break.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 
 /// The break, as one row.
@@ -34,14 +34,15 @@ class BreakControl extends ConsumerStatefulWidget {
   final bool breakUsed;
   final DateTime? breakStartedAt;
 
-  /// How long the break runs. Comes from the shift or the server — there is no
-  /// number of minutes baked into this widget.
-  final int capMinutes;
+  /// How long the break runs, from the partner's own break or the server.
+  /// Null only until either has answered — there is no number of minutes
+  /// baked into this widget.
+  final int? capMinutes;
   final int? fallbackRemainingSeconds;
   final bool loading;
   final VoidCallback onToggle;
 
-  /// `12:00 – 12:30` when the shift schedules its break, else null.
+  /// `12:00 – 12:30` when the partner's break has a fixed time, else null.
   final String? window;
   final BreakWindowState windowState;
 
@@ -87,8 +88,9 @@ class _BreakControlState extends ConsumerState<BreakControl> {
 
   /// Resolves the moment the break should end, so we can tick down locally.
   DateTime? get _endsAt {
-    if (widget.breakStartedAt != null && widget.capMinutes > 0) {
-      return widget.breakStartedAt!.add(Duration(minutes: widget.capMinutes));
+    final cap = widget.capMinutes;
+    if (widget.breakStartedAt != null && cap != null && cap > 0) {
+      return widget.breakStartedAt!.add(Duration(minutes: cap));
     }
     if (widget.fallbackRemainingSeconds != null) {
       // No start time available: count down from first build.
@@ -115,7 +117,11 @@ class _BreakControlState extends ConsumerState<BreakControl> {
       final overrun = remaining != null && remaining.isNegative;
       final accent = overrun ? XpertColors.danger : _breakColor;
       final detail = remaining == null
-          ? ref.t('home.break_running', {'minutes': '${widget.capMinutes}'})
+          ? (widget.capMinutes == null
+                ? null
+                : ref.t('home.break_running', {
+                    'minutes': '${widget.capMinutes}',
+                  }))
           : overrun
           ? ref.t('home.break_overrun', {'time': _format(remaining.abs())})
           : ref.t('home.break_remaining', {
@@ -163,9 +169,9 @@ class _BreakControlState extends ConsumerState<BreakControl> {
       );
     }
 
-    // A scheduled break is not available all shift. Outside its window the
-    // button would be a control the server refuses, so the row says when
-    // instead — which is also the answer to "when is my break?".
+    // A break with a fixed time is not offered all shift. Outside its window
+    // the row says when instead — which is also the answer to "when is my
+    // break?".
     if (widget.windowState == BreakWindowState.upcoming) {
       return _Row(
         icon: Icons.free_breakfast_rounded,
@@ -183,7 +189,7 @@ class _BreakControlState extends ConsumerState<BreakControl> {
       );
     }
 
-    // Break window is open now, or the shift sets no window at all.
+    // Break window is open now, or the break has no fixed time at all.
     final open = widget.windowState == BreakWindowState.now;
     return _Row(
       tint: open ? _breakColor : null,

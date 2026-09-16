@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
+import 'package:turanta_xpert/core/models/partner_break.dart';
 import 'package:turanta_xpert/core/models/partner_shift.dart';
 import 'package:turanta_xpert/features/home/data/attendance_api.dart';
 import 'package:turanta_xpert/features/home/data/summary_api.dart';
@@ -199,6 +200,30 @@ void main() {
     // what the status beside them is measured against.
     expect(find.text('09:00 – 18:00'), findsOneWidget);
     expect(find.textContaining(RegExp(r'^[A-Z][a-z]{2}, \d+ ')), findsNothing);
+  });
+
+  testWidgets('the break shown is the partner\'s own', (tester) async {
+    await _pump(
+      tester,
+      attendance: AttendanceState(
+        currentShift: CurrentShiftPayload(
+          shift: _shift,
+          workDate: '2026-08-02',
+          scheduledStartAt: DateTime(2026, 8, 2, 9),
+          scheduledEndAt: DateTime(2026, 8, 2, 18),
+          allowedCheckinFrom: DateTime(2026, 8, 2, 8, 45),
+          canCheckIn: true,
+          partnerBreak: const PartnerBreak(
+            startTime: '14:15',
+            durationMinutes: 20,
+          ),
+        ),
+      ),
+    );
+
+    // Two partners on the same 09:00–18:00 shift can break at different
+    // times, so the window comes from the partner, never the shift.
+    expect(find.text('14:15 – 14:35'), findsOneWidget);
   });
 
   testWidgets('check-out does not shout', (tester) async {

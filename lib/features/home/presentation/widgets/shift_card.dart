@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/context_t.dart';
+import '../../../../core/models/partner_break.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 import '../availability_controller.dart';
 import 'break_control.dart';
@@ -88,6 +89,7 @@ class ShiftCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = attendance.phase;
     final shift = attendance.currentShift?.shift;
+    final partnerBreak = attendance.currentShift?.partnerBreak;
     final hours = shift?.displayWindow ?? '—';
     final opensAt = attendance.currentShift?.allowedCheckinFrom;
 
@@ -238,13 +240,14 @@ class ShiftCard extends ConsumerWidget {
                             ?.toString() ??
                         '',
                   ),
-              window: shift.breakWindowLabel,
-              windowState: shift.breakStateAt(),
-              // The server's cap when it has answered, the shift's own length
-              // until then. Never a literal.
+              window: partnerBreak?.windowLabel,
+              windowState:
+                  partnerBreak?.stateAt() ?? BreakWindowState.none,
+              // The server's cap when it has answered, the partner's own
+              // length until then. Never a literal.
               capMinutes:
                   (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
-                  shift.breakDurationMinutes,
+                  partnerBreak?.durationMinutes,
               fallbackRemainingSeconds:
                   (attendance.breakSummary?['remainingSeconds'] as num?)
                       ?.toInt(),

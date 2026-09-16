@@ -27,6 +27,8 @@ class ProfileScreen extends ConsumerWidget {
     final name = profile?.displayName ?? ref.t('home.default_name');
     final phone = profile?.phone ?? session?.phone ?? '—';
     final shift = profile?.shift;
+    final partnerBreak = profile?.partnerBreak;
+    final employeeId = profile?.employeeId;
 
     return Scaffold(
       backgroundColor: XpertColors.background,
@@ -45,8 +47,14 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: XpertSpacing.sm),
           XpertListGroup(
             children: [
+              if (employeeId != null)
+                XpertListRow(
+                  icon: Icons.badge_outlined,
+                  title: ref.t('profile.employee_id'),
+                  value: employeeId,
+                ),
               XpertListRow(
-                icon: Icons.badge_outlined,
+                icon: Icons.person_outline_rounded,
                 title: ref.t('profile.gender'),
                 value: profile?.gender ?? '—',
               ),
@@ -57,6 +65,16 @@ class ProfileScreen extends ConsumerWidget {
                     ? '—'
                     : '${shift.name} · ${shift.displayWindow}',
               ),
+              if (shift != null && partnerBreak != null)
+                XpertListRow(
+                  icon: Icons.free_breakfast_outlined,
+                  title: ref.t('profile.break'),
+                  value:
+                      partnerBreak.windowLabel ??
+                      ref.t('profile.break_any_time', {
+                        'minutes': '${partnerBreak.durationMinutes}',
+                      }),
+                ),
             ],
           ),
           const SizedBox(height: XpertSpacing.xl),

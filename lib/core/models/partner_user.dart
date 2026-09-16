@@ -1,3 +1,4 @@
+import 'partner_break.dart';
 import 'partner_shift.dart';
 
 enum UserRole {
@@ -73,6 +74,7 @@ class PartnerUser {
     required this.id,
     required this.role,
     required this.status,
+    this.employeeId,
     this.name,
     this.phone,
     this.email,
@@ -82,6 +84,7 @@ class PartnerUser {
     this.shiftId,
     this.shiftCode,
     this.shift,
+    this.partnerBreak,
     this.warehouseId,
     this.kycStatus,
     this.kycComplete = false,
@@ -93,6 +96,9 @@ class PartnerUser {
   final String id;
   final UserRole role;
   final UserStatus status;
+
+  /// `TRNT-26-000012`, issued on approval.
+  final String? employeeId;
   final String? name;
   final String? phone;
   final String? email;
@@ -102,6 +108,7 @@ class PartnerUser {
   final int? shiftId;
   final String? shiftCode;
   final PartnerShift? shift;
+  final PartnerBreak? partnerBreak;
   final int? warehouseId;
   final PartnerKycStatus? kycStatus;
   final bool kycComplete;
@@ -118,6 +125,7 @@ class PartnerUser {
       id: json['id'] as String,
       role: userRoleFromApi(json['role'] as String?),
       status: userStatusFromApi(json['status'] as String?),
+      employeeId: json['employeeId'] as String?,
       name: json['name'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
@@ -129,6 +137,7 @@ class PartnerUser {
       shift: shiftJson is Map<String, dynamic>
           ? PartnerShift.fromJson(shiftJson)
           : null,
+      partnerBreak: PartnerBreak.fromJson(json['break']),
       warehouseId: (json['warehouseId'] as num?)?.toInt(),
       kycStatus: kycStatusFromApi(json['kycStatus'] as String?),
       kycComplete: json['kycComplete'] as bool? ?? false,

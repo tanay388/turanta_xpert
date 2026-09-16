@@ -1,6 +1,3 @@
-/// Where the clock sits relative to a shift's scheduled break.
-enum BreakWindowState { none, upcoming, now, passed }
-
 /// Partner working-shift (DB-backed).
 class PartnerShift {
   const PartnerShift({
@@ -11,8 +8,6 @@ class PartnerShift {
     this.checkinBeforeMinutes = 15,
     this.checkinGraceMinutes = 15,
     this.checkoutGraceMinutes = 30,
-    this.breakStartTime,
-    this.breakDurationMinutes = 30,
     this.isActive = true,
   });
 
@@ -27,53 +22,12 @@ class PartnerShift {
   final int checkinBeforeMinutes;
   final int checkinGraceMinutes;
   final int checkoutGraceMinutes;
-
-  /// `HH:mm` when the scheduled break starts, or null for a shift that has
-  /// none and leaves the partner to take one when the day allows.
-  final String? breakStartTime;
-  final int breakDurationMinutes;
   final bool isActive;
-
-  bool get hasScheduledBreak =>
-      breakStartTime != null && breakDurationMinutes > 0;
 
   /// `07:00 – 19:00`. The 12-hour [displayWindow] is for a line of its own;
   /// in a two-column strip it ellipsises, and it reads inconsistently beside
   /// a break window that has no room for AM/PM either.
   String get compactWindowLabel => '$startTime – $endTime';
-
-  /// `12:00 – 12:30`, or null when there is no scheduled break.
-  String? get breakWindowLabel {
-    final start = breakStartTime;
-    if (start == null || breakDurationMinutes <= 0) return null;
-    final startMins = _minutesOfDay(start);
-    if (startMins == null) return null;
-    final endMins = (startMins + breakDurationMinutes) % 1440;
-    return '${_hhmm(startMins)} – ${_hhmm(endMins)}';
-  }
-
-  static String _hhmm(int minutes) {
-    final h = (minutes ~/ 60).toString().padLeft(2, '0');
-    final m = (minutes % 60).toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
-  /// Where `now` sits relative to the break window.
-  BreakWindowState breakStateAt([DateTime? now]) {
-    final start = breakStartTime;
-    if (start == null || breakDurationMinutes <= 0) {
-      return BreakWindowState.none;
-    }
-    final startMins = _minutesOfDay(start);
-    if (startMins == null) return BreakWindowState.none;
-
-    final at = now ?? DateTime.now();
-    // Measured from the window's start and wrapped, so an overnight shift
-    // breaking at 01:00 is handled by the same arithmetic.
-    final offset = (at.hour * 60 + at.minute - startMins + 1440) % 1440;
-    if (offset < breakDurationMinutes) return BreakWindowState.now;
-    return offset > 720 ? BreakWindowState.upcoming : BreakWindowState.passed;
-  }
 
   factory PartnerShift.fromJson(Map<String, dynamic> json) {
     return PartnerShift(
@@ -89,11 +43,6 @@ class PartnerShift {
           (json['checkinGraceMinutes'] as num?)?.toInt() ?? 15,
       checkoutGraceMinutes:
           (json['checkoutGraceMinutes'] as num?)?.toInt() ?? 30,
-      breakStartTime: (json['breakStartTime'] as String?)?.trim().isEmpty ?? true
-          ? null
-          : json['breakStartTime'] as String?,
-      breakDurationMinutes:
-          (json['breakDurationMinutes'] as num?)?.toInt() ?? 30,
       isActive: json['isActive'] as bool? ?? true,
     );
   }
