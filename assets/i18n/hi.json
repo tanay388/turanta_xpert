@@ -480,5 +480,8 @@
   "jobs.close_no_otp.cta": "Close job",
   "home.strip.shift": "शिफ्ट",
   "home.strip.break": "ब्रेक",
-  "home.strip.break_now": "अभी ब्रेक"
+  "home.strip.break_now": "अभी ब्रेक",
+  "home.break_at": "ब्रेक {window} पर",
+  "home.break_window_over": "ब्रेक का समय निकल गया",
+  "home.today.not_started": "आपका दिन अभी शुरू नहीं हुआ"
 }

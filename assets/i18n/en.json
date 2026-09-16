@@ -480,5 +480,8 @@
   "jobs.close_no_otp.cta": "Close job",
   "home.strip.shift": "SHIFT",
   "home.strip.break": "BREAK",
-  "home.strip.break_now": "BREAK NOW"
+  "home.strip.break_now": "BREAK NOW",
+  "home.break_at": "Break at {window}",
+  "home.break_window_over": "Break window has passed",
+  "home.today.not_started": "Your day hasn't started yet"
 }

@@ -480,5 +480,8 @@
   "jobs.close_no_otp.cta": "Job close karein",
   "home.strip.shift": "SHIFT",
   "home.strip.break": "BREAK",
-  "home.strip.break_now": "ABHI BREAK"
+  "home.strip.break_now": "ABHI BREAK",
+  "home.break_at": "Break {window} par",
+  "home.break_window_over": "Break ka time nikal gaya",
+  "home.today.not_started": "Aapka din abhi shuru nahi hua"
 }

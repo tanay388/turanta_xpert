@@ -262,8 +262,12 @@ class ShiftCard extends ConsumerWidget {
                               ?.toString() ??
                           '',
                     ),
+                window: shift?.breakWindowLabel,
+                windowState:
+                    shift?.breakStateAt() ?? BreakWindowState.none,
                 capMinutes:
                     (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
+                    shift?.breakDurationMinutes ??
                     45,
                 fallbackRemainingSeconds:
                     (attendance.breakSummary?['remainingSeconds'] as num?)

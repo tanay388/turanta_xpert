@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/i18n/context_t.dart';
+import '../../../../core/models/partner_shift.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 
 /// The break affordance, in its three states: offer, running, spent.
@@ -20,6 +21,8 @@ class BreakControl extends ConsumerStatefulWidget {
     required this.fallbackRemainingSeconds,
     required this.loading,
     required this.onToggle,
+    this.window,
+    this.windowState = BreakWindowState.none,
   });
 
   final bool isOnBreak;
@@ -29,6 +32,10 @@ class BreakControl extends ConsumerStatefulWidget {
   final int? fallbackRemainingSeconds;
   final bool loading;
   final VoidCallback onToggle;
+
+  /// `12:00 – 12:30` when the shift schedules its break, else null.
+  final String? window;
+  final BreakWindowState windowState;
 
   @override
   ConsumerState<BreakControl> createState() => _BreakControlState();
@@ -195,6 +202,46 @@ class _BreakControlState extends ConsumerState<BreakControl> {
               child: Text(
                 ref.t('home.break_used'),
                 style: XpertTypography.caption.copyWith(color: XpertColors.muted),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // A scheduled break is not available all shift. Outside its window the
+    // button would be a control the server refuses, so the window itself is
+    // shown instead — which is also the answer to "when is my break?".
+    if (widget.windowState == BreakWindowState.upcoming ||
+        widget.windowState == BreakWindowState.passed) {
+      final upcoming = widget.windowState == BreakWindowState.upcoming;
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: XpertSpacing.md,
+          vertical: XpertSpacing.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: XpertColors.background,
+          borderRadius: BorderRadius.circular(XpertRadius.md),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              upcoming
+                  ? Icons.free_breakfast_rounded
+                  : Icons.schedule_rounded,
+              size: 18,
+              color: XpertColors.muted,
+            ),
+            const SizedBox(width: XpertSpacing.sm),
+            Expanded(
+              child: Text(
+                upcoming
+                    ? ref.t('home.break_at', {'window': widget.window ?? ''})
+                    : ref.t('home.break_window_over'),
+                style: XpertTypography.caption.copyWith(
+                  color: XpertColors.muted,
+                ),
               ),
             ),
           ],

@@ -126,20 +126,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         _SectionLabel(text: ref.t('jobs.home.ongoing_title')),
                         const SizedBox(height: XpertSpacing.sm),
                         ActiveJobCard(job: ongoingJob),
-                        const SizedBox(height: XpertSpacing.xl),
+                        const SizedBox(height: XpertSpacing.lg),
                       ],
                       ShiftCard(
                         attendance: attendance,
                         blockedByJob: blockedByJob,
                       ),
-                      const SizedBox(height: XpertSpacing.xl),
-                      _SectionLabel(text: ref.t('home.today.title')),
-                      const SizedBox(height: XpertSpacing.sm),
-                      const TodayCard(),
-                      const SizedBox(height: XpertSpacing.xl),
-                      // With a live job on screen the empty "no jobs yet" slot
-                      // says nothing worth a section header of its own.
+                      // One section, not two stacked ones: a running job and
+                      // the next job are never both the thing to read first,
+                      // so whichever applies gets the header and the other is
+                      // simply absent.
                       if (ongoingJob == null || nextJob != null) ...[
+                        const SizedBox(height: XpertSpacing.lg),
                         _SectionLabel(text: ref.t('jobs.home.next_title')),
                         const SizedBox(height: XpertSpacing.sm),
                         NextJobCard(
@@ -147,8 +145,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           loading: jobsState.loading && nextJob == null,
                           extraCount: extraCount,
                         ),
-                        const SizedBox(height: XpertSpacing.xl),
                       ],
+                      const SizedBox(height: XpertSpacing.lg),
+                      _SectionLabel(text: ref.t('home.today.title')),
+                      const SizedBox(height: XpertSpacing.sm),
+                      const TodayCard(),
+                      const SizedBox(height: XpertSpacing.lg),
                       const HomeNavRows(),
                     ],
                   ),

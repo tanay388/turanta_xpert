@@ -19,53 +19,70 @@ class TodayCard extends ConsumerWidget {
     final data = ref.watch(todaySummaryProvider).valueOrNull;
 
     final hours = data?.hoursWorked ?? 0;
-    final rating = data?.rating;
+    // Nothing earned, nothing worked, nothing done: on a day that has not
+    // started this card is three dashes and a zero taking a third of the
+    // screen above the button the partner actually came to press.
+    final idle =
+        data == null ||
+        (data.earnings <= 0 && data.jobsDone == 0 && hours <= 0);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(XpertSpacing.lg),
+      padding: EdgeInsets.all(idle ? XpertSpacing.md : XpertSpacing.lg),
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
         border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            data == null || data.earnings <= 0
-                ? '—'
-                : '₹${data.earnings.toStringAsFixed(0)}',
-            style: XpertTypography.metric.copyWith(fontSize: 34),
-          ),
-          const SizedBox(height: XpertSpacing.xs),
-          Text(
-            ref.t('home.today.earned'),
-            style: XpertTypography.caption.copyWith(fontSize: 13),
-          ),
-          const SizedBox(height: XpertSpacing.md),
-          const Divider(height: 1, color: Color(0xFFE8EDF1)),
-          const SizedBox(height: XpertSpacing.md),
-          Row(
-            children: [
-              _Stat(
-                value: '${data?.jobsDone ?? 0}',
-                label: ref.t('home.stats.jobs'),
-              ),
-              const _StatDivider(),
-              _Stat(
-                value: hours.toStringAsFixed(hours % 1 == 0 ? 0 : 1),
-                label: ref.t('home.stats.hours'),
-              ),
-              const _StatDivider(),
-              _Stat(
-                value: rating == null ? '—' : rating.toStringAsFixed(1),
-                label: ref.t('home.stats.rating'),
-              ),
-            ],
-          ),
-        ],
-      ),
+      child: idle
+          ? Row(
+              children: [
+                const Icon(
+                  Icons.wb_sunny_rounded,
+                  size: 18,
+                  color: XpertColors.muted,
+                ),
+                const SizedBox(width: XpertSpacing.sm),
+                Expanded(
+                  child: Text(
+                    ref.t('home.today.not_started'),
+                    style: XpertTypography.caption.copyWith(fontSize: 13),
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data == null || data.earnings <= 0
+                      ? '—'
+                      : '₹${data.earnings.toStringAsFixed(0)}',
+                  style: XpertTypography.metric.copyWith(fontSize: 34),
+                ),
+                const SizedBox(height: XpertSpacing.xs),
+                Text(
+                  ref.t('home.today.earned'),
+                  style: XpertTypography.caption.copyWith(fontSize: 13),
+                ),
+                const SizedBox(height: XpertSpacing.md),
+                const Divider(height: 1, color: Color(0xFFE8EDF1)),
+                const SizedBox(height: XpertSpacing.md),
+                Row(
+                  children: [
+                    _Stat(
+                      value: '${data?.jobsDone ?? 0}',
+                      label: ref.t('home.stats.jobs'),
+                    ),
+                    const _StatDivider(),
+                    _Stat(
+                      value: hours.toStringAsFixed(hours % 1 == 0 ? 0 : 1),
+                      label: ref.t('home.stats.hours'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }

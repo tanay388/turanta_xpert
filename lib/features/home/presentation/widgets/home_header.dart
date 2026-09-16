@@ -5,7 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../core/i18n/context_t.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 import '../../../auth/presentation/auth_controller.dart';
-import '../availability_controller.dart';
+import '../../data/summary_api.dart';
 
 /// The home header: who you are, when you work, and the one thing you might
 /// need in a hurry.
@@ -35,7 +35,7 @@ class HomeHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authProvider).valueOrNull?.profile;
     final name = profile?.displayName ?? ref.t('home.default_name');
-    final shift = ref.watch(attendanceProvider).currentShift?.shift;
+    final rating = ref.watch(todaySummaryProvider).valueOrNull?.rating;
 
 
     return DecoratedBox(
@@ -71,21 +71,32 @@ class HomeHeader extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (shift != null) ...[
+                    // The rating, not the shift hours. Hours are the shape of
+                    // today and belong on the card that is a record of it; the
+                    // rating is a standing fact about the person, which is
+                    // what this line is for. It also stops the hours being
+                    // printed twice in two different formats.
+                    if (rating != null) ...[
                       const SizedBox(height: 5),
-                      // The one piece of context that belongs to the person
-                      // rather than to today: the hours they work. Today's date
-                      // moved down to the shift card, which is the thing it is
-                      // actually a record of.
-                      Text(
-                        shift.displayWindow,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          height: 1.2,
-                          color: XpertColors.muted,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 15,
+                            color: Color(0xFFF2A81D),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              color: XpertColors.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
