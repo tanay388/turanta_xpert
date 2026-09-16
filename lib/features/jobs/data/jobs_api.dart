@@ -274,6 +274,32 @@ class JobsApi {
     return PartnerJob.fromJson(res.data ?? const {});
   }
 
+  /// Close a job the customer never gave the end code for.
+  ///
+  /// The server only allows this once the booked time is over, and records
+  /// the reason on the booking timeline — an unverified close is paid and
+  /// bookkept exactly like a normal one, it is just flagged for ops.
+  Future<PartnerJob> completeWithoutOtp(
+    int id, {
+    required String reason,
+    String? note,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/partner/jobs/$id/complete-without-otp',
+      data: {
+        'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        if (latitude != null && longitude != null) ...{
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      },
+    );
+    return PartnerJob.fromJson(res.data ?? const {});
+  }
+
   /// Bridge a masked call to the customer. Nothing is dialled from the
   /// handset — the backend rings this phone first, so neither party sees the
   /// other's number.

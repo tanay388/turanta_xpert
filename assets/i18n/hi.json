@@ -466,5 +466,16 @@
   "legal.consent.error": "आपकी सहमति दर्ज नहीं हो सकी। कृपया फिर कोशिश करें।",
   "legal.consent.load_error": "दस्तावेज़ लोड नहीं हो सके। अपना कनेक्शन जाँचें।",
   "kyc.pan.none": "मेरे पास पैन कार्ड नहीं है",
-  "kyc.pan.not_applicable": "लागू नहीं"
+  "kyc.pan.not_applicable": "लागू नहीं",
+  "jobs.close_no_otp.link": "Can't get the code?",
+  "jobs.close_no_otp.title": "Close without the code",
+  "jobs.close_no_otp.body": "Use this only when the job is done and the customer can't give you the end code.",
+  "jobs.close_no_otp.reason.customer_unavailable": "Customer unavailable",
+  "jobs.close_no_otp.reason.customer_left": "Customer left",
+  "jobs.close_no_otp.reason.customer_refused": "Customer refused",
+  "jobs.close_no_otp.reason.code_not_working": "Code not working",
+  "jobs.close_no_otp.reason.other": "Other",
+  "jobs.close_no_otp.note_hint": "Tell us what happened",
+  "jobs.close_no_otp.notice": "Your earning for this job is unaffected. The close is recorded and reviewed by our team.",
+  "jobs.close_no_otp.cta": "Close job"
 }

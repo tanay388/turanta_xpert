@@ -19,6 +19,7 @@ import '../../../core/theme/xpert_tokens.dart';
 import '../data/jobs_api.dart';
 import 'jobs_controller.dart';
 import 'live_job_timer.dart';
+import 'widgets/close_without_otp_sheet.dart';
 import 'widgets/job_otp_field.dart';
 import 'widgets/job_service_icon.dart';
 
@@ -168,6 +169,46 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     return ref.t('common.distance_km', {
       'value': (metres / 1000).toStringAsFixed(1),
     });
+  }
+
+  Future<void> _closeWithoutOtp(PartnerJob job) async {
+    final choice = await showCloseWithoutOtpSheet(context);
+    if (choice == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final position = await _currentPosition();
+      await ref
+          .read(jobsApiProvider)
+          .completeWithoutOtp(
+            job.id,
+            reason: choice.reason,
+            note: choice.note,
+            latitude: position?.latitude,
+            longitude: position?.longitude,
+          );
+      ref.invalidate(partnerJobProvider(widget.jobId));
+      await ref.read(jobsProvider.notifier).refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ref.t('jobs.complete.success'))),
+      );
+    } on DioException catch (e) {
+      final msg = _dioMessage(e) ?? ref.t('jobs.error.generic');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ref.t('jobs.error.generic'))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _submit(PartnerJob job) async {
@@ -376,6 +417,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                 busy: _busy,
                 hasError: _otpError,
                 onSubmit: () => _submit(job),
+                onCloseWithoutOtp: () => _closeWithoutOtp(job),
                 onChanged: () {
                   if (_otpError) setState(() => _otpError = false);
                 },
@@ -854,6 +896,7 @@ class _ActionFooter extends ConsumerWidget {
     required this.hasError,
     required this.onSubmit,
     required this.onChanged,
+    this.onCloseWithoutOtp,
   });
 
   final PartnerJob job;
@@ -862,6 +905,7 @@ class _ActionFooter extends ConsumerWidget {
   final bool hasError;
   final VoidCallback onSubmit;
   final VoidCallback onChanged;
+  final VoidCallback? onCloseWithoutOtp;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -918,6 +962,28 @@ class _ActionFooter extends ConsumerWidget {
                       ),
               ),
             ),
+            // Offered only once the booked time is up, which is the same line
+            // the server draws. Showing it earlier would just be a way to skip
+            // the code.
+            if (job.isInProgress &&
+                DateTime.now().isAfter(job.scheduledEndAt) &&
+                onCloseWithoutOtp != null) ...[
+              const SizedBox(height: XpertSpacing.xs),
+              TextButton(
+                onPressed: busy ? null : onCloseWithoutOtp,
+                style: TextButton.styleFrom(
+                  foregroundColor: XpertColors.muted,
+                ),
+                child: Text(
+                  ref.t('jobs.close_no_otp.link'),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
