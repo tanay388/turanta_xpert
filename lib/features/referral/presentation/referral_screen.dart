@@ -199,7 +199,7 @@ class _CodeBlock extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(XpertSpacing.md),
           decoration: BoxDecoration(
-            color: XpertColors.canvasSoft,
+            color: XpertColors.heroCard,
             borderRadius: BorderRadius.circular(XpertRadius.lg),
             border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
           ),
@@ -222,7 +222,7 @@ class _CodeBlock extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                         letterSpacing: 4,
                         height: 1,
-                        color: XpertColors.onCanvas,
+                        color: XpertColors.onSurface,
                       ),
                     ),
                   ],
@@ -253,7 +253,7 @@ class _CodeBlock extends ConsumerWidget {
           style: const TextStyle(
             fontSize: 12.5,
             height: 1.35,
-            color: XpertColors.onCanvasMuted,
+            color: XpertColors.muted,
           ),
         ),
       ],
@@ -286,7 +286,7 @@ class _CanvasAction extends StatelessWidget {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Icon(icon, size: 19, color: XpertColors.onCanvas),
+            child: Icon(icon, size: 19, color: XpertColors.onSurface),
           ),
         ),
       ),

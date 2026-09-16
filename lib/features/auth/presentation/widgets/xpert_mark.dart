@@ -19,9 +19,9 @@ class XpertMark extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(size * 0.26),
-        // A hairline stops the tile's own near-white field from dissolving
-        // into a bright edge against the dark canvas.
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        // The tile's own field is near-white, so on the wash it needs a
+        // darker hairline to read as an edge at all.
+        border: Border.all(color: XpertColors.border.withValues(alpha: 0.55)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.asset(
@@ -110,7 +110,7 @@ class _XpertMarkLockupState extends State<XpertMarkLockup>
                     children: const [
                       TextSpan(
                         text: 'Xpert',
-                        style: TextStyle(color: XpertColors.primary),
+                        style: TextStyle(color: XpertColors.heroAccent),
                       ),
                     ],
                     style: TextStyle(
@@ -118,7 +118,7 @@ class _XpertMarkLockupState extends State<XpertMarkLockup>
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.7,
                       height: 1,
-                      color: XpertColors.onCanvas,
+                      color: XpertColors.onSurface,
                     ),
                   ),
                 ),

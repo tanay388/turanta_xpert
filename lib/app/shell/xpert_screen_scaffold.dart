@@ -39,17 +39,17 @@ class XpertScreenScaffold extends StatelessWidget {
     final canPop = context.canPop();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: XpertColors.canvas,
+        backgroundColor: XpertColors.heroTop,
         body: Column(
           children: [
             ColoredBox(
-              color: XpertColors.canvas,
+              color: XpertColors.heroTop,
               child: SafeArea(
                 bottom: false,
                 child: Padding(
@@ -133,7 +133,7 @@ class _PillTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: XpertColors.canvasSoft,
+        color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.pill),
       ),
       child: Row(
@@ -152,7 +152,7 @@ class _PillTabs extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 9),
                     decoration: BoxDecoration(
                       color: i == selected
-                          ? XpertColors.primary
+                          ? XpertColors.heroAccent
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(XpertRadius.pill),
                     ),
@@ -164,9 +164,7 @@ class _PillTabs extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: i == selected
-                            ? XpertColors.onPrimary
-                            : XpertColors.onCanvasMuted,
+                        color: i == selected ? Colors.white : XpertColors.muted,
                       ),
                     ),
                   ),
@@ -202,7 +200,7 @@ class _BackButton extends StatelessWidget {
             child: Icon(
               Icons.arrow_back_rounded,
               size: 20,
-              color: XpertColors.onCanvas,
+              color: XpertColors.onSurface,
             ),
           ),
         ),

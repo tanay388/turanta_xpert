@@ -131,7 +131,7 @@ class _RateHero extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.canvasSoft,
+        color: XpertColors.heroCard,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
@@ -162,7 +162,7 @@ class _RateHero extends ConsumerWidget {
                         : '—',
                     style: XpertTypography.metric.copyWith(
                       fontSize: 34,
-                      color: XpertColors.onCanvas,
+                      color: XpertColors.onSurface,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -177,7 +177,7 @@ class _RateHero extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: XpertColors.onCanvasMuted,
+                        color: XpertColors.muted,
                       ),
                     ),
                   ),
@@ -197,7 +197,7 @@ class _RateHero extends ConsumerWidget {
                       rating.toStringAsFixed(1),
                       style: XpertTypography.metric.copyWith(
                         fontSize: 20,
-                        color: XpertColors.onCanvas,
+                        color: XpertColors.onSurface,
                       ),
                     ),
                     if (perf.ratingCount > 0) ...[
@@ -206,7 +206,7 @@ class _RateHero extends ConsumerWidget {
                         '(${perf.ratingCount})',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: XpertColors.onCanvasMuted,
+                          color: XpertColors.muted,
                         ),
                       ),
                     ],
@@ -232,7 +232,7 @@ class _RateHero extends ConsumerWidget {
                   const Icon(
                     Icons.trending_up_rounded,
                     size: 15,
-                    color: XpertColors.primary,
+                    color: XpertColors.heroAccent,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -245,7 +245,7 @@ class _RateHero extends ConsumerWidget {
                         fontSize: 12.5,
                         height: 1.3,
                         fontWeight: FontWeight.w600,
-                        color: XpertColors.primary,
+                        color: XpertColors.heroAccent,
                       ),
                     ),
                   ),

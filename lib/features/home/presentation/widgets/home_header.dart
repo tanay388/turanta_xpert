@@ -38,8 +38,14 @@ class HomeHeader extends ConsumerWidget {
     final shift = ref.watch(attendanceProvider).currentShift?.shift;
 
 
-    return ColoredBox(
-      color: XpertColors.canvas,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [XpertColors.heroTop, XpertColors.heroBottom],
+        ),
+      ),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -76,7 +82,7 @@ class HomeHeader extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 12.5,
                           height: 1.2,
-                          color: XpertColors.onCanvasMuted,
+                          color: XpertColors.muted,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -139,8 +145,10 @@ class _Avatar extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: XpertColors.canvasSoft,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            color: XpertColors.heroCard,
+            border: Border.all(
+              color: XpertColors.border.withValues(alpha: 0.5),
+            ),
             image: photo == null || photo!.isEmpty
                 ? null
                 : DecorationImage(
@@ -155,7 +163,7 @@ class _Avatar extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: XpertColors.onCanvas,
+                    color: XpertColors.onSurface,
                   ),
                 )
               : null,

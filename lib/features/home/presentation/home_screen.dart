@@ -75,17 +75,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final shown = (ongoingJob == null ? 0 : 1) + (nextJob == null ? 0 : 1);
     final extraCount = (jobsState.jobs.length - shown).clamp(0, 99);
 
-    // The app's AppBarTheme asks for dark status-bar icons, which is right for
-    // every other screen and invisible against this one's dark header. With no
-    // AppBar here, nothing would otherwise say so.
+    // No AppBar here, so nothing else would set the status-bar icons; the
+    // header is the wash, so they are dark.
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: XpertColors.canvas,
+        backgroundColor: XpertColors.heroTop,
         body: Column(
           children: [
             HomeHeader(

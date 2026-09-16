@@ -15,16 +15,23 @@ class XpertColors {
   static const primaryDeep = Color(0xFF00799A);
   static const onPrimary = Color(0xFF000000);
 
-  /// The auth canvas. Unlike the customer app — whose mark ships on its own
-  /// black field and so dictates the backdrop — the Xpert logo is a square app
-  /// icon baked onto near-white (#F8F8F8, no alpha). It is shown as a tile
-  /// instead, which frees the canvas: this is the brand cyan taken down to
-  /// something a partner reads at 6am, and it tells the two apps apart at a
-  /// glance on a phone that has both.
+  /// The dark field the app used to open on. Nothing is painted with it any
+  /// more — it survives only as the near-black that shadows and scrims are
+  /// mixed from, which is why it is this colour rather than pure black.
   static const canvas = Color(0xFF0B1720);
-  static const canvasSoft = Color(0xFF13222D);
-  static const onCanvas = Color(0xFFF4F9FC);
-  static const onCanvasMuted = Color(0xFF8CA3B2);
+
+  /// The wash both apps open on. A partner and a customer are looking at two
+  /// halves of one product, and the header, the hero and the top of every
+  /// sheet share this ground so they read that way.
+  static const heroTop = Color(0xFFDCF1FB);
+  static const heroBottom = Color(0xFFFFFFFF);
+
+  /// Display-weight blue for the wash. [primary] is 1.8:1 on it and
+  /// [primaryDeep] reads teal beside it; this is the same family at 4.7:1.
+  static const heroAccent = Color(0xFF0F76BE);
+
+  /// Card fill on the wash — a tint, not a white card on a white ground.
+  static const heroCard = Color(0xFFCDEAFA);
 
   static const secondary = Color(0xFFE6F9FF);
   static const onSecondary = Color(0xFF0A0A0A);
@@ -77,7 +84,7 @@ class XpertTypography {
     fontWeight: FontWeight.w800,
     height: 1.15,
     letterSpacing: -0.9,
-    color: XpertColors.onCanvas,
+    color: XpertColors.onSurface,
   );
 
   static const eyebrow = TextStyle(
@@ -85,7 +92,7 @@ class XpertTypography {
     fontWeight: FontWeight.w700,
     height: 1.2,
     letterSpacing: 1.6,
-    color: XpertColors.primary,
+    color: XpertColors.heroAccent,
   );
 
   /// Numbers that change while you look at them — a running shift clock, the

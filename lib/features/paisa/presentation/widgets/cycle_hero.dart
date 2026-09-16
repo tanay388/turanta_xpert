@@ -30,7 +30,7 @@ class CycleHero extends ConsumerWidget {
     return Semantics(
       button: onTap != null,
       child: Material(
-        color: XpertColors.canvasSoft,
+        color: XpertColors.heroCard,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -62,7 +62,7 @@ class CycleHero extends ConsumerWidget {
                   '₹${summary.totalAmount.toStringAsFixed(0)}',
                   style: XpertTypography.metric.copyWith(
                     fontSize: 38,
-                    color: XpertColors.onCanvas,
+                    color: XpertColors.onSurface,
                   ),
                 ),
                 if (start != null && end != null) ...[
@@ -74,7 +74,7 @@ class CycleHero extends ConsumerWidget {
                       minHeight: 6,
                       backgroundColor: Colors.white.withValues(alpha: 0.14),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        XpertColors.primary,
+                        XpertColors.heroAccent,
                       ),
                     ),
                   ),
@@ -87,7 +87,7 @@ class CycleHero extends ConsumerWidget {
                           '${DateFormat('d MMM').format(end)}',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: XpertColors.onCanvasMuted,
+                            color: XpertColors.muted,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -97,7 +97,7 @@ class CycleHero extends ConsumerWidget {
                         const Icon(
                           Icons.chevron_right_rounded,
                           size: 18,
-                          color: XpertColors.onCanvasMuted,
+                          color: XpertColors.muted,
                         ),
                     ],
                   ),
@@ -129,7 +129,7 @@ class _CanvasStatus extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (color, key) = switch (status) {
-      PayoutStatus.accruing => (XpertColors.primary, 'paisa.status.accruing'),
+      PayoutStatus.accruing => (XpertColors.heroAccent, 'paisa.status.accruing'),
       PayoutStatus.pending => (const Color(0xFFF5A623), 'paisa.status.pending'),
       PayoutStatus.paid => (const Color(0xFF4CAF50), 'paisa.status.paid'),
     };

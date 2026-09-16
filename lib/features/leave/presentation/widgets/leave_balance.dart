@@ -35,7 +35,7 @@ class LeaveBalance extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.canvasSoft,
+        color: XpertColors.heroCard,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
@@ -52,7 +52,7 @@ class LeaveBalance extends ConsumerWidget {
                 '$available',
                 style: XpertTypography.metric.copyWith(
                   fontSize: 38,
-                  color: XpertColors.onCanvas,
+                  color: XpertColors.onSurface,
                 ),
               ),
               const SizedBox(width: 6),
@@ -61,7 +61,7 @@ class LeaveBalance extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: XpertColors.onCanvasMuted,
+                  color: XpertColors.muted,
                 ),
               ),
             ],
@@ -76,7 +76,7 @@ class LeaveBalance extends ConsumerWidget {
               children: [
                 if (used > 0)
                   _Legend(
-                    color: XpertColors.onCanvasMuted,
+                    color: XpertColors.muted,
                     label: ref.t('leave.balance.used', {'count': '$used'}),
                   ),
                 if (pending > 0)
@@ -86,7 +86,7 @@ class LeaveBalance extends ConsumerWidget {
                   ),
                 if (lapsed > 0)
                   _Legend(
-                    color: XpertColors.onCanvasMuted,
+                    color: XpertColors.muted,
                     label: ref.t('leave.balance.lapsed', {'count': '$lapsed'}),
                   ),
               ],
@@ -137,7 +137,7 @@ class _Meter extends StatelessWidget {
             if (available > 0)
               Expanded(
                 flex: available,
-                child: const ColoredBox(color: XpertColors.primary),
+                child: const ColoredBox(color: XpertColors.heroAccent),
               ),
             if (pending > 0)
               Expanded(
@@ -179,7 +179,7 @@ class _Legend extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 12,
-            color: XpertColors.onCanvasMuted,
+            color: XpertColors.muted,
           ),
         ),
       ],

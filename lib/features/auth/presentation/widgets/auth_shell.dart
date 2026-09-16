@@ -32,21 +32,28 @@ class AuthShell extends StatelessWidget {
     final hasKeyboard = keyboardInset > 0;
     final sheetFlex = hasKeyboard ? _sheetFlexWithKeyboard : _sheetFlex;
 
-    // Dark canvas, no AppBar — nothing else would tell the system to draw
-    // light status-bar icons, and the theme's default is dark-on-light.
+    // The wash is light, so the status bar takes dark icons.
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        backgroundColor: XpertColors.canvas,
+        backgroundColor: XpertColors.heroTop,
         body: Stack(
           fit: StackFit.expand,
           children: [
-            const ColoredBox(color: XpertColors.canvas),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [XpertColors.heroTop, XpertColors.heroBottom],
+                ),
+              ),
+            ),
             AnimatedPositioned(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
