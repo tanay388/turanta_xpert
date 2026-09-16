@@ -19,7 +19,13 @@ class HomeNavRows extends ConsumerWidget {
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -86,7 +92,10 @@ class _NavRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: XpertTypography.label.copyWith(fontSize: 14)),
+                  Text(
+                    title,
+                    style: XpertTypography.label.copyWith(fontSize: 14),
+                  ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
                     Text(

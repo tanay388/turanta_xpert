@@ -7,13 +7,17 @@ import '../../../../core/i18n/context_t.dart';
 import '../../../../core/models/partner_shift.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 
-/// The break affordance, in its three states: offer, running, spent.
+/// The break, as one row.
 ///
-/// Moved out of home_screen.dart unchanged — it owns a ticker and a fallback
-/// countdown, and that logic has nothing to do with laying out a home screen.
+/// It used to be a full-width button stacked under a full-width check-out
+/// button, so a partner mid-shift faced two slabs of colour where one line of
+/// information would do. Every state now fits the same row: what the break is
+/// and, only when it can actually be started or ended, a small button at the
+/// end of it.
 class BreakControl extends ConsumerStatefulWidget {
   const BreakControl({
     super.key,
+    required this.isCheckedIn,
     required this.isOnBreak,
     required this.breakUsed,
     required this.breakStartedAt,
@@ -25,9 +29,13 @@ class BreakControl extends ConsumerStatefulWidget {
     this.windowState = BreakWindowState.none,
   });
 
+  final bool isCheckedIn;
   final bool isOnBreak;
   final bool breakUsed;
   final DateTime? breakStartedAt;
+
+  /// How long the break runs. Comes from the shift or the server — there is no
+  /// number of minutes baked into this widget.
   final int capMinutes;
   final int? fallbackRemainingSeconds;
   final bool loading;
@@ -42,11 +50,10 @@ class BreakControl extends ConsumerStatefulWidget {
 }
 
 class _BreakControlState extends ConsumerState<BreakControl> {
-  static const _breakColor = Color(0xFFE65100);
-  static const _breakBg = Color(0xFFFFF3E0);
-  static const _breakBorder = Color(0xFFFFB74D);
+  static const _breakColor = Color(0xFFD35400);
 
   Timer? _ticker;
+  DateTime? _fallbackEnd;
 
   @override
   void initState() {
@@ -74,24 +81,24 @@ class _BreakControlState extends ConsumerState<BreakControl> {
     } else {
       _ticker?.cancel();
       _ticker = null;
+      _fallbackEnd = null;
     }
   }
 
   /// Resolves the moment the break should end, so we can tick down locally.
   DateTime? get _endsAt {
-    if (widget.breakStartedAt != null) {
+    if (widget.breakStartedAt != null && widget.capMinutes > 0) {
       return widget.breakStartedAt!.add(Duration(minutes: widget.capMinutes));
     }
     if (widget.fallbackRemainingSeconds != null) {
       // No start time available: count down from first build.
-      _fallbackEnd ??= DateTime.now()
-          .add(Duration(seconds: widget.fallbackRemainingSeconds!));
+      _fallbackEnd ??= DateTime.now().add(
+        Duration(seconds: widget.fallbackRemainingSeconds!),
+      );
       return _fallbackEnd;
     }
     return null;
   }
-
-  DateTime? _fallbackEnd;
 
   String _format(Duration d) {
     final m = d.inMinutes;
@@ -101,196 +108,246 @@ class _BreakControlState extends ConsumerState<BreakControl> {
 
   @override
   Widget build(BuildContext context) {
-    final isOnBreak = widget.isOnBreak;
-    final breakUsed = widget.breakUsed;
-    final loading = widget.loading;
-    final onToggle = widget.onToggle;
+    final window = widget.window;
 
-    // Active break: prominent card with live countdown + End break button.
-    if (isOnBreak) {
-      final endsAt = _endsAt;
-      final remaining = endsAt?.difference(DateTime.now());
+    if (widget.isOnBreak) {
+      final remaining = _endsAt?.difference(DateTime.now());
       final overrun = remaining != null && remaining.isNegative;
-      final remainingText = remaining == null
-          ? ref.t('home.break_running')
-          : overrun
-              ? ref.t('home.break_overrun',
-                  {'time': _format(remaining.abs())})
-              : ref.t('home.break_remaining', {
-                  'time': _format(remaining),
-                  'cap': '${widget.capMinutes}',
-                });
       final accent = overrun ? XpertColors.danger : _breakColor;
-      return Container(
-        padding: const EdgeInsets.all(XpertSpacing.md),
-        decoration: BoxDecoration(
-          color: overrun
-              ? XpertColors.danger.withValues(alpha: 0.08)
-              : _breakBg,
-          borderRadius: BorderRadius.circular(XpertRadius.md),
-          border: Border.all(
-              color: overrun
-                  ? XpertColors.danger.withValues(alpha: 0.5)
-                  : _breakBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.free_breakfast_rounded, color: accent),
-                const SizedBox(width: XpertSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        overrun
-                            ? ref.t('home.break_over_title')
-                            : ref.t('home.break_on_title'),
-                        style: XpertTypography.label.copyWith(
-                          color: accent,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        remainingText,
-                        style: XpertTypography.caption.copyWith(
-                          color: accent,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: XpertSpacing.md),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: loading ? null : onToggle,
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(ref.t('home.break_end')),
-            ),
-          ],
+      final detail = remaining == null
+          ? ref.t('home.break_running', {'minutes': '${widget.capMinutes}'})
+          : overrun
+          ? ref.t('home.break_overrun', {'time': _format(remaining.abs())})
+          : ref.t('home.break_remaining', {
+              'time': _format(remaining),
+              'cap': '${widget.capMinutes}',
+            });
+
+      return _Row(
+        tint: accent,
+        icon: Icons.free_breakfast_rounded,
+        iconColor: accent,
+        title: overrun
+            ? ref.t('home.break_over_title')
+            : ref.t('home.break_on_title'),
+        titleColor: accent,
+        detail: detail,
+        detailColor: accent,
+        tabular: true,
+        action: _SmallButton(
+          label: ref.t('home.break_end'),
+          color: accent,
+          filled: true,
+          onPressed: widget.loading ? null : widget.onToggle,
         ),
       );
     }
 
-    // Already used today: subtle disabled note.
-    if (breakUsed) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: XpertSpacing.md,
-          vertical: XpertSpacing.sm + 2,
-        ),
-        decoration: BoxDecoration(
-          color: XpertColors.background,
-          borderRadius: BorderRadius.circular(XpertRadius.md),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.check_circle_outline_rounded,
-                size: 18, color: XpertColors.muted),
-            const SizedBox(width: XpertSpacing.sm),
-            Expanded(
-              child: Text(
-                ref.t('home.break_used'),
-                style: XpertTypography.caption.copyWith(color: XpertColors.muted),
-              ),
-            ),
-          ],
-        ),
+    if (widget.breakUsed) {
+      return _Row(
+        icon: Icons.check_circle_rounded,
+        iconColor: XpertColors.success,
+        title: ref.t('home.break_used'),
+      );
+    }
+
+    // Off shift the row is information: when the break will be. There is
+    // nothing to start until the partner has checked in.
+    if (!widget.isCheckedIn) {
+      if (window == null) return const SizedBox.shrink();
+      return _Row(
+        icon: Icons.free_breakfast_rounded,
+        iconColor: XpertColors.muted,
+        title: ref.t('home.break_label'),
+        detail: window,
       );
     }
 
     // A scheduled break is not available all shift. Outside its window the
-    // button would be a control the server refuses, so the window itself is
-    // shown instead — which is also the answer to "when is my break?".
-    if (widget.windowState == BreakWindowState.upcoming ||
-        widget.windowState == BreakWindowState.passed) {
-      final upcoming = widget.windowState == BreakWindowState.upcoming;
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: XpertSpacing.md,
-          vertical: XpertSpacing.sm + 2,
-        ),
-        decoration: BoxDecoration(
-          color: XpertColors.background,
-          borderRadius: BorderRadius.circular(XpertRadius.md),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              upcoming
-                  ? Icons.free_breakfast_rounded
-                  : Icons.schedule_rounded,
-              size: 18,
-              color: XpertColors.muted,
-            ),
-            const SizedBox(width: XpertSpacing.sm),
-            Expanded(
-              child: Text(
-                upcoming
-                    ? ref.t('home.break_at', {'window': widget.window ?? ''})
-                    : ref.t('home.break_window_over'),
-                style: XpertTypography.caption.copyWith(
-                  color: XpertColors.muted,
-                ),
-              ),
-            ),
-          ],
-        ),
+    // button would be a control the server refuses, so the row says when
+    // instead — which is also the answer to "when is my break?".
+    if (widget.windowState == BreakWindowState.upcoming) {
+      return _Row(
+        icon: Icons.free_breakfast_rounded,
+        iconColor: XpertColors.muted,
+        title: ref.t('home.break_label'),
+        detail: window,
+      );
+    }
+    if (widget.windowState == BreakWindowState.passed) {
+      return _Row(
+        icon: Icons.schedule_rounded,
+        iconColor: XpertColors.muted,
+        title: ref.t('home.break_window_over'),
+        detail: window,
       );
     }
 
-    // Available: clear call to action with icon + hint.
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _breakColor,
-        side: const BorderSide(color: _breakBorder),
-        padding: const EdgeInsets.symmetric(vertical: XpertSpacing.sm + 2),
+    // Break window is open now, or the shift sets no window at all.
+    final open = widget.windowState == BreakWindowState.now;
+    return _Row(
+      tint: open ? _breakColor : null,
+      icon: Icons.free_breakfast_rounded,
+      iconColor: open ? _breakColor : XpertColors.muted,
+      title: open ? ref.t('home.strip.break_now') : ref.t('home.break_label'),
+      titleColor: open ? _breakColor : null,
+      detail: window,
+      action: _SmallButton(
+        label: ref.t('home.break_take_title'),
+        color: _breakColor,
+        filled: false,
+        onPressed: widget.loading ? null : widget.onToggle,
       ),
-      onPressed: loading ? null : onToggle,
+    );
+  }
+}
+
+/// The single shape every break state takes.
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.titleColor,
+    this.detail,
+    this.detailColor,
+    this.tint,
+    this.tabular = false,
+    this.action,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final Color? titleColor;
+  final String? detail;
+  final Color? detailColor;
+
+  /// A faint wash of this colour behind the row, for the states that are live.
+  final Color? tint;
+  final bool tabular;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        XpertSpacing.sm + 2,
+        XpertSpacing.xs,
+        action == null ? XpertSpacing.sm + 2 : XpertSpacing.xs,
+        XpertSpacing.xs,
+      ),
+      constraints: const BoxConstraints(minHeight: 48),
+      decoration: BoxDecoration(
+        color: tint?.withValues(alpha: 0.08) ?? XpertColors.background,
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.free_breakfast_rounded, size: 20),
+          Icon(icon, size: 18, color: iconColor),
           const SizedBox(width: XpertSpacing.sm),
-          // Flexible, not bare: a Row hands its children unbounded width, so
-          // the longer Hindi and Marathi strings ran straight off the button.
-          Flexible(
+          Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  ref.t('home.break_take_title'),
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: XpertTypography.label.copyWith(
-                    color: _breakColor,
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                    color: titleColor ?? XpertColors.onSurface,
                   ),
                 ),
-                Text(
-                  ref.t('home.break_take_hint'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: XpertTypography.caption.copyWith(
-                    color: _breakColor.withValues(alpha: 0.8),
+                if (detail != null)
+                  Text(
+                    detail!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.3,
+                      fontWeight: FontWeight.w500,
+                      color: detailColor ?? XpertColors.muted,
+                      fontFeatures: tabular
+                          ? const [FontFeature.tabularFigures()]
+                          : null,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
+          if (action != null) ...[
+            const SizedBox(width: XpertSpacing.sm),
+            Flexible(child: action!),
+          ],
         ],
       ),
     );
+  }
+}
+
+/// A button sized to the row it sits in, not to the card.
+class _SmallButton extends StatelessWidget {
+  const _SmallButton({
+    required this.label,
+    required this.color,
+    required this.filled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final Color color;
+  final bool filled;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(XpertRadius.pill),
+    );
+    const padding = EdgeInsets.symmetric(horizontal: 14);
+    const size = Size(0, 34);
+    // Set on the style, not only on the Text: the app theme gives every button
+    // its full-size label style, which otherwise still sizes this one.
+    const textStyle = TextStyle(fontSize: 13, fontWeight: FontWeight.w700);
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: textStyle,
+    );
+
+    return filled
+        ? FilledButton(
+            onPressed: onPressed,
+            style: FilledButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              padding: padding,
+              minimumSize: size,
+              textStyle: textStyle,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: shape,
+            ),
+            child: text,
+          )
+        : OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: color,
+              side: BorderSide(color: color.withValues(alpha: 0.6)),
+              backgroundColor: XpertColors.surface,
+              padding: padding,
+              minimumSize: size,
+              textStyle: textStyle,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: shape,
+            ),
+            child: text,
+          );
   }
 }

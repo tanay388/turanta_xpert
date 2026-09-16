@@ -10,8 +10,7 @@ class EarlyCheckoutSheet extends ConsumerStatefulWidget {
   const EarlyCheckoutSheet({super.key});
 
   @override
-  ConsumerState<EarlyCheckoutSheet> createState() =>
-      _EarlyCheckoutSheetState();
+  ConsumerState<EarlyCheckoutSheet> createState() => _EarlyCheckoutSheetState();
 }
 
 class _EarlyCheckoutSheetState extends ConsumerState<EarlyCheckoutSheet> {
@@ -56,10 +55,12 @@ class _EarlyCheckoutSheetState extends ConsumerState<EarlyCheckoutSheet> {
           DropdownButtonFormField<String>(
             initialValue: _code,
             items: _reasonCodes
-                .map((code) => DropdownMenuItem(
-                      value: code,
-                      child: Text(_reasonLabel(code)),
-                    ))
+                .map(
+                  (code) => DropdownMenuItem(
+                    value: code,
+                    child: Text(_reasonLabel(code)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _code = v ?? _code),
           ),

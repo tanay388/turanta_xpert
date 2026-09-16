@@ -191,11 +191,11 @@
   "home.on_leave_card_hint": "आज रजेवर आहात — चेक-इनची गरज नाही.",
   "home.status_on_leave": "रजेवर",
   "home.break_take_title": "ब्रेक घ्या",
-  "home.break_take_hint": "45 मिनिटांपर्यंत · शिफ्टमध्ये एकदा",
+  "home.break_take_hint": "{minutes} मिनिटांपर्यंत · शिफ्टमध्ये एकदा",
   "home.break_on_title": "ब्रेकवर",
   "home.break_in_progress_hint": "थोडी विश्रांती घ्या. परत आल्यावर ब्रेक संपवा दाबा.",
   "home.break_remaining": "{cap} मिनिटांपैकी {time} बाकी",
-  "home.break_running": "ब्रेक सुरू आहे (जास्तीत जास्त 45 मिनिटे)",
+  "home.break_running": "ब्रेक सुरू आहे (जास्तीत जास्त {minutes} मिनिटे)",
   "home.break_over_title": "ब्रेकची वेळ संपली",
   "home.break_overrun": "{time} जास्त झाले — आता ब्रेक संपवा",
   "home.break_end": "ब्रेक संपवा",
@@ -483,5 +483,8 @@
   "home.strip.break_now": "आता ब्रेक",
   "home.break_at": "ब्रेक {window} वाजता",
   "home.break_window_over": "ब्रेकची वेळ निघून गेली",
-  "home.today.not_started": "तुमचा दिवस अजून सुरू झाला नाही"
+  "home.today.not_started": "तुमचा दिवस अजून सुरू झाला नाही",
+  "home.break_label": "ब्रेक",
+  "home.on_shift_for": "आज शिफ्टवर",
+  "jobs.home.none_off_shift": "अजून काम नाही — काम मिळवण्यासाठी चेक इन करा"
 }

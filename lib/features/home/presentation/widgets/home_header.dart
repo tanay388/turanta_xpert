@@ -37,7 +37,6 @@ class HomeHeader extends ConsumerWidget {
     final name = profile?.displayName ?? ref.t('home.default_name');
     final rating = ref.watch(todaySummaryProvider).valueOrNull?.rating;
 
-
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(

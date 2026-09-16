@@ -70,8 +70,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final blockedByJob = jobsState.blocksShiftExit;
     // Once the running job is the hero, the next-job slot shows what comes
     // after it instead of printing the same job twice.
-    final nextJob =
-        ongoingJob == null ? jobsState.nextJob : jobsState.upcomingJob;
+    final nextJob = ongoingJob == null
+        ? jobsState.nextJob
+        : jobsState.upcomingJob;
     final shown = (ongoingJob == null ? 0 : 1) + (nextJob == null ? 0 : 1);
     final extraCount = (jobsState.jobs.length - shown).clamp(0, 99);
 
@@ -144,6 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           job: nextJob,
                           loading: jobsState.loading && nextJob == null,
                           extraCount: extraCount,
+                          checkedIn: attendance.isCheckedIn,
                         ),
                       ],
                       const SizedBox(height: XpertSpacing.lg),

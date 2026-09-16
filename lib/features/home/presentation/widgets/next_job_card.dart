@@ -14,11 +14,16 @@ class NextJobCard extends ConsumerWidget {
     required this.job,
     required this.loading,
     required this.extraCount,
+    this.checkedIn = true,
   });
 
   final PartnerJob? job;
   final bool loading;
   final int extraCount;
+
+  /// "Stay checked in" is advice to someone who is; off shift the empty state
+  /// has to say what actually brings a job.
+  final bool checkedIn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,8 +45,14 @@ class NextJobCard extends ConsumerWidget {
         padding: const EdgeInsets.all(XpertSpacing.md),
         decoration: BoxDecoration(
           color: XpertColors.surface,
-          borderRadius: BorderRadius.circular(XpertRadius.md),
-          border: Border.all(color: XpertColors.border.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(XpertRadius.lg),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D0B1720),
+              blurRadius: 18,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -58,7 +69,9 @@ class NextJobCard extends ConsumerWidget {
             const SizedBox(width: XpertSpacing.md),
             Expanded(
               child: Text(
-                ref.t('jobs.home.none'),
+                checkedIn
+                    ? ref.t('jobs.home.none')
+                    : ref.t('jobs.home.none_off_shift'),
                 style: XpertTypography.caption,
               ),
             ),
@@ -67,13 +80,15 @@ class NextJobCard extends ConsumerWidget {
       );
     }
 
-    final when = DateFormat('EEE, d MMM · h:mm a')
-        .format(job!.scheduledStartAt.toLocal());
+    final when = DateFormat(
+      'EEE, d MMM · h:mm a',
+    ).format(job!.scheduledStartAt.toLocal());
     final statusLabel = job!.isInProgress
         ? ref.t('jobs.status.in_progress')
         : ref.t('jobs.status.assigned');
-    final statusColor =
-        job!.isInProgress ? XpertColors.primary : XpertColors.success;
+    final statusColor = job!.isInProgress
+        ? XpertColors.primary
+        : XpertColors.success;
     final address = job!.displayAddress.trim();
 
     return Material(
@@ -127,9 +142,7 @@ class NextJobCard extends ConsumerWidget {
                       color: XpertColors.muted,
                     ),
                     const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(when, style: XpertTypography.caption),
-                    ),
+                    Expanded(child: Text(when, style: XpertTypography.caption)),
                   ],
                 ),
               if (address.isNotEmpty) ...[

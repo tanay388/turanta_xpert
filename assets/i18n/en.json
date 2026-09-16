@@ -191,11 +191,11 @@
   "home.on_leave_card_hint": "You are on leave — no check-in needed today.",
   "home.status_on_leave": "On leave",
   "home.break_take_title": "Take a break",
-  "home.break_take_hint": "Up to 45 min · once per shift",
+  "home.break_take_hint": "Up to {minutes} min · once per shift",
   "home.break_on_title": "On break",
   "home.break_in_progress_hint": "Rest a bit. Tap End break when you are back.",
   "home.break_remaining": "{time} left of {cap} min",
-  "home.break_running": "Break running (max 45 min)",
+  "home.break_running": "Break running (max {minutes} min)",
   "home.break_over_title": "Break time over",
   "home.break_overrun": "{time} over the limit — end break now",
   "home.break_end": "End break",
@@ -483,5 +483,8 @@
   "home.strip.break_now": "BREAK NOW",
   "home.break_at": "Break at {window}",
   "home.break_window_over": "Break window has passed",
-  "home.today.not_started": "Your day hasn't started yet"
+  "home.today.not_started": "Your day hasn't started yet",
+  "home.break_label": "Break",
+  "home.on_shift_for": "on shift today",
+  "jobs.home.none_off_shift": "No jobs yet — check in to start receiving them"
 }

@@ -36,8 +36,7 @@ class SummaryApi {
   final Dio _dio;
 
   Future<TodaySummary> today() async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/partner/summary/today');
+    final res = await _dio.get<Map<String, dynamic>>('/partner/summary/today');
     return TodaySummary.fromJson(res.data ?? const {});
   }
 }

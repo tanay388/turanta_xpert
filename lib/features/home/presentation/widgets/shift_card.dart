@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/context_t.dart';
-import '../../../../core/models/partner_shift.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 import '../availability_controller.dart';
 import 'break_control.dart';
@@ -150,22 +149,16 @@ class ShiftCard extends ConsumerWidget {
 
     final startedAt = attendance.snapshot?.sessionStartedAt;
 
+    // "You are available for new jobs" under a green CHECKED IN pill is the
+    // same sentence twice, and on a break the break row already says it. The
+    // line stays wherever it tells the partner something to do.
+    final showSubtitle =
+        !(phase == ShiftPhase.onShift && !blockedByJob) &&
+        phase != ShiftPhase.onBreak;
+
     return Container(
       padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        boxShadow: [
-          // Tinted to the page behind it rather than a grey wash, so the card
-          // lifts without looking like it is floating in smoke. The border it
-          // used to carry as well made two separations doing one job.
-          BoxShadow(
-            color: XpertColors.canvas.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+      decoration: _cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -187,101 +180,143 @@ class ShiftCard extends ConsumerWidget {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              else
-                // Today's date belongs to the shift, not to the greeting — it
-                // is what this card is a record of.
-                Text(
-                  DateFormat('EEE, d MMM').format(DateTime.now()),
-                  style: XpertTypography.caption.copyWith(fontSize: 12),
+              else if (shift != null)
+                // The hours, where the date used to be. The date told a
+                // partner nothing they did not know; the hours are what the
+                // status is measured against.
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.schedule_rounded,
+                      size: 14,
+                      color: XpertColors.muted,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      shift.compactWindowLabel,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: XpertColors.muted,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
-          // The clock is the reward for being on shift, so it gets the space.
           if (isCheckedIn && startedAt != null) ...[
             const SizedBox(height: XpertSpacing.md),
             ShiftClock(startedAt: startedAt),
+            // A bare 02:14:00 could be a countdown, a time of day or an ETA.
+            Text(
+              ref.t('home.on_shift_for'),
+              style: XpertTypography.caption.copyWith(fontSize: 12.5),
+            ),
           ],
-          const SizedBox(height: XpertSpacing.sm),
-          Text(subtitle, style: XpertTypography.caption),
-          if (shift != null) ...[
+          if (showSubtitle) ...[
+            const SizedBox(height: XpertSpacing.sm),
+            Text(subtitle, style: XpertTypography.caption),
+          ],
+          // Ending a break stays available even with a job in hand — the
+          // server guards only break *start*, and a partner handed a job
+          // mid-break has to be able to come back from it.
+          if (shift != null &&
+              phase != ShiftPhase.complete &&
+              (!blockedByJob || phase == ShiftPhase.onBreak)) ...[
             const SizedBox(height: XpertSpacing.md),
-            _DayStrip(shift: shift),
+            BreakControl(
+              isCheckedIn: isCheckedIn,
+              isOnBreak: phase == ShiftPhase.onBreak,
+              breakUsed: attendance.breakUsed,
+              breakStartedAt:
+                  attendance.snapshot?.breakStartedAt ??
+                  DateTime.tryParse(
+                    ((attendance.breakSummary?['break']
+                                as Map<String, dynamic>?)?['startedAt'])
+                            ?.toString() ??
+                        '',
+                  ),
+              window: shift.breakWindowLabel,
+              windowState: shift.breakStateAt(),
+              // The server's cap when it has answered, the shift's own length
+              // until then. Never a literal.
+              capMinutes:
+                  (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
+                  shift.breakDurationMinutes,
+              fallbackRemainingSeconds:
+                  (attendance.breakSummary?['remainingSeconds'] as num?)
+                      ?.toInt(),
+              loading: attendance.loading,
+              onToggle: () => _toggleBreak(context, ref),
+            ),
           ],
-          // A finished day gets no button, so it gets no gap under the text
-          // either — the card just stops.
-          if (showsCheckInButton || isCheckedIn)
-            const SizedBox(height: XpertSpacing.lg),
-          if (showsCheckInButton)
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: canCheckIn
-                    ? XpertColors.online
-                    : XpertColors.border,
-                foregroundColor: canCheckIn
-                    ? Colors.white
-                    : XpertColors.onSurface.withValues(alpha: 0.5),
-                disabledBackgroundColor: XpertColors.border,
-                disabledForegroundColor: XpertColors.onSurface.withValues(
-                  alpha: 0.5,
+          if (showsCheckInButton) ...[
+            const SizedBox(height: XpertSpacing.md),
+            // Off shift, checking in is the one thing this card is for, so it
+            // keeps the full-width filled button.
+            SizedBox(
+              height: 50,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: canCheckIn
+                      ? XpertColors.online
+                      : XpertColors.border,
+                  foregroundColor: canCheckIn
+                      ? Colors.white
+                      : XpertColors.onSurface.withValues(alpha: 0.5),
+                  disabledBackgroundColor: XpertColors.border,
+                  disabledForegroundColor: XpertColors.onSurface.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
+                onPressed: (attendance.loading || !canCheckIn)
+                    ? null
+                    : () => _checkIn(context, ref),
+                child: Text(checkInLabel),
               ),
-              onPressed: (attendance.loading || !canCheckIn)
-                  ? null
-                  : () => _checkIn(context, ref),
-              child: Text(checkInLabel),
-            )
-          else if (isCheckedIn) ...[
+            ),
+          ] else if (isCheckedIn) ...[
+            const SizedBox(height: XpertSpacing.md),
             if (blockedByJob)
               _JobLockNote(text: ref.t('home.on_job_note'))
-            else ...[
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: XpertColors.danger,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: attendance.loading
-                    ? null
-                    : () => _checkOut(context, ref),
-                child: Text(ref.t('home.check_out')),
-              ),
-              const SizedBox(height: XpertSpacing.md),
-            ],
-            // Ending a break stays available even with a job in hand — the
-            // server guards only break *start*, and a partner handed a job
-            // mid-break has to be able to come back from it.
-            if (!blockedByJob || phase == ShiftPhase.onBreak) ...[
-              if (blockedByJob) const SizedBox(height: XpertSpacing.md),
-              BreakControl(
-                isOnBreak: phase == ShiftPhase.onBreak,
-                breakUsed: attendance.breakUsed,
-                breakStartedAt:
-                    attendance.snapshot?.breakStartedAt ??
-                    DateTime.tryParse(
-                      ((attendance.breakSummary?['break']
-                                  as Map<String, dynamic>?)?['startedAt'])
-                              ?.toString() ??
-                          '',
+            else
+              // Checking out is the rarest thing a partner does all day and
+              // the one that ends their availability. It sat under the clock
+              // as a full-width red slab — the loudest control on the card,
+              // and the easiest to hit by accident. It is still here, just no
+              // longer shouting.
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: XpertColors.danger,
+                    side: BorderSide(
+                      color: XpertColors.danger.withValues(alpha: 0.35),
                     ),
-                window: shift?.breakWindowLabel,
-                windowState:
-                    shift?.breakStateAt() ?? BreakWindowState.none,
-                capMinutes:
-                    (attendance.breakSummary?['capMinutes'] as num?)?.toInt() ??
-                    shift?.breakDurationMinutes ??
-                    45,
-                fallbackRemainingSeconds:
-                    (attendance.breakSummary?['remainingSeconds'] as num?)
-                        ?.toInt(),
-                loading: attendance.loading,
-                onToggle: () => _toggleBreak(context, ref),
+                  ),
+                  onPressed: attendance.loading
+                      ? null
+                      : () => _checkOut(context, ref),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: Text(ref.t('home.check_out')),
+                ),
               ),
-            ],
           ],
         ],
       ),
     );
   }
 }
+
+const _cardDecoration = BoxDecoration(
+  color: XpertColors.surface,
+  borderRadius: BorderRadius.all(Radius.circular(XpertRadius.lg)),
+  boxShadow: [
+    BoxShadow(color: Color(0x0D0B1720), blurRadius: 18, offset: Offset(0, 6)),
+  ],
+);
 
 /// Why the shift's buttons are gone. An empty space where a check-out button
 /// used to be reads as a bug; a line saying what unlocks it does not.
@@ -303,18 +338,12 @@ class _JobLockNote extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.lock_clock,
-            size: 18,
-            color: XpertColors.muted,
-          ),
+          const Icon(Icons.lock_clock, size: 18, color: XpertColors.muted),
           const SizedBox(width: XpertSpacing.sm),
           Expanded(
             child: Text(
               text,
-              style: XpertTypography.caption.copyWith(
-                color: XpertColors.muted,
-              ),
+              style: XpertTypography.caption.copyWith(color: XpertColors.muted),
             ),
           ),
         ],
@@ -325,136 +354,6 @@ class _JobLockNote extends StatelessWidget {
 
 /// Status as one object rather than a loose dot beside loose text — it reads
 /// as a state, and it survives being glanced at from a stairwell.
-/// The shape of the day in one line: the hours worked, and when the break
-/// falls inside them.
-///
-/// Both were things a partner had to already know. The break especially — it
-/// is set by ops on the shift, so until it was shown here the only way to find
-/// out when lunch was, was to ask.
-class _DayStrip extends ConsumerWidget {
-  const _DayStrip({required this.shift});
-
-  final PartnerShift shift;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final breakLabel = shift.breakWindowLabel;
-    final state = shift.breakStateAt();
-    final isNow = state == BreakWindowState.now;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: XpertSpacing.sm + 2,
-        vertical: XpertSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: XpertColors.background,
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _StripItem(
-              icon: Icons.schedule_rounded,
-              label: ref.t('home.strip.shift'),
-              value: shift.compactWindowLabel,
-            ),
-          ),
-          if (breakLabel != null) ...[
-            Container(
-              width: 1,
-              height: 26,
-              margin: const EdgeInsets.symmetric(
-                horizontal: XpertSpacing.sm,
-              ),
-              color: XpertColors.border.withValues(alpha: 0.4),
-            ),
-            Expanded(
-              child: _StripItem(
-                icon: Icons.free_breakfast_rounded,
-                // Named while it is happening, so a partner glancing down
-                // mid-shift gets the answer and not just the schedule.
-                label: isNow
-                    ? ref.t('home.strip.break_now')
-                    : ref.t('home.strip.break'),
-                value: breakLabel,
-                accent: isNow,
-                dimmed: state == BreakWindowState.passed,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StripItem extends StatelessWidget {
-  const _StripItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.accent = false,
-    this.dimmed = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool accent;
-  final bool dimmed;
-
-  @override
-  Widget build(BuildContext context) {
-    final ink = accent
-        ? XpertColors.heroAccent
-        : dimmed
-        ? XpertColors.muted
-        : XpertColors.onSurface;
-
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: accent ? XpertColors.heroAccent : XpertColors.muted,
-        ),
-        const SizedBox(width: XpertSpacing.xs),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: XpertTypography.caption.copyWith(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                  color: accent ? XpertColors.heroAccent : XpertColors.muted,
-                ),
-              ),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25,
-                  color: ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.color, required this.label});
 

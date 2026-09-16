@@ -68,7 +68,8 @@ class CurrentShiftPayload {
       dayStatus: json['dayStatus'] as String?,
       attendanceStatusToday: json['attendanceStatusToday'] as String?,
       checkInBlockedReason: json['checkInBlockedReason'] as String?,
-      checkInBlocked: json['checkInBlocked'] as bool? ??
+      checkInBlocked:
+          json['checkInBlocked'] as bool? ??
           (json['checkInBlockedReason'] != null),
     );
   }
@@ -100,8 +101,7 @@ class AttendanceSnapshot {
   final int pingIntervalSeconds;
 
   bool get isCheckedIn =>
-      attendanceStatus == 'CHECKED_IN' ||
-      attendanceStatus == 'checked_in';
+      attendanceStatus == 'CHECKED_IN' || attendanceStatus == 'checked_in';
 
   bool get isAvailable =>
       availabilityStatus == 'AVAILABLE' || availabilityStatus == 'available';
@@ -114,29 +114,32 @@ class AttendanceSnapshot {
     final src = session ?? json;
     final br = json['break'] as Map<String, dynamic>?;
     return AttendanceSnapshot(
-      attendanceStatus: (json['attendanceStatus'] ??
-              src['attendanceStatus'] ??
-              (session != null ? 'CHECKED_IN' : 'NOT_CHECKED_IN'))
-          .toString(),
-      availabilityStatus: (json['availabilityStatus'] ??
-              src['availabilityStatus'] ??
-              (session != null ? 'AVAILABLE' : 'OFF_SHIFT'))
-          .toString(),
-      presenceStatus: (json['presenceStatus'] ??
-              src['presenceStatus'] ??
-              (session != null ? 'ACTIVE' : 'UNAVAILABLE'))
-          .toString(),
-      sessionId: (src['id'] as num?)?.toInt() ??
-          (json['sessionId'] as num?)?.toInt(),
+      attendanceStatus:
+          (json['attendanceStatus'] ??
+                  src['attendanceStatus'] ??
+                  (session != null ? 'CHECKED_IN' : 'NOT_CHECKED_IN'))
+              .toString(),
+      availabilityStatus:
+          (json['availabilityStatus'] ??
+                  src['availabilityStatus'] ??
+                  (session != null ? 'AVAILABLE' : 'OFF_SHIFT'))
+              .toString(),
+      presenceStatus:
+          (json['presenceStatus'] ??
+                  src['presenceStatus'] ??
+                  (session != null ? 'ACTIVE' : 'UNAVAILABLE'))
+              .toString(),
+      sessionId:
+          (src['id'] as num?)?.toInt() ?? (json['sessionId'] as num?)?.toInt(),
       sessionStartedAt: _parseDt(src['checkinAt'] ?? json['checkinAt']),
       breakUsed: br?['used'] as bool? ?? json['breakUsed'] as bool? ?? false,
-      breakActive: br?['active'] as bool? ??
+      breakActive:
+          br?['active'] as bool? ??
           ((json['availabilityStatus'] ?? src['availabilityStatus'])
                   ?.toString() ==
               'ON_BREAK'),
       breakStartedAt: _parseDt(br?['startedAt']),
-      scheduledEndAt:
-          _parseDt(src['scheduledEndAt'] ?? json['scheduledEndAt']),
+      scheduledEndAt: _parseDt(src['scheduledEndAt'] ?? json['scheduledEndAt']),
       pingIntervalSeconds:
           (json['pingIntervalSeconds'] as num?)?.toInt() ?? 120,
     );
@@ -231,10 +234,7 @@ class AttendanceApi {
     return AttendanceSnapshot.fromJson(res.data ?? const {});
   }
 
-  Future<void> startBreak({
-    double? latitude,
-    double? longitude,
-  }) async {
+  Future<void> startBreak({double? latitude, double? longitude}) async {
     await _dio.post<Map<String, dynamic>>(
       '/breaks/start',
       data: {
@@ -244,10 +244,7 @@ class AttendanceApi {
     );
   }
 
-  Future<void> endBreak({
-    double? latitude,
-    double? longitude,
-  }) async {
+  Future<void> endBreak({double? latitude, double? longitude}) async {
     await _dio.post<Map<String, dynamic>>(
       '/breaks/end',
       data: {
@@ -311,8 +308,7 @@ class AttendanceHistoryItem {
       id: (json['id'] as num).toInt(),
       attendanceStatus: json['attendanceStatus'] as String? ?? '',
       attendanceOutcome: json['attendanceOutcome'] as String? ?? '',
-      scheduledStartAt:
-          DateTime.parse(json['scheduledStartAt'] as String),
+      scheduledStartAt: DateTime.parse(json['scheduledStartAt'] as String),
       scheduledEndAt: DateTime.parse(json['scheduledEndAt'] as String),
       checkinAt: parse(json['checkinAt']),
       checkoutAt: parse(json['checkoutAt']),
@@ -325,10 +321,7 @@ class AttendanceHistoryItem {
 }
 
 class AttendanceHistoryResult {
-  const AttendanceHistoryResult({
-    required this.total,
-    required this.items,
-  });
+  const AttendanceHistoryResult({required this.total, required this.items});
 
   final int total;
   final List<AttendanceHistoryItem> items;

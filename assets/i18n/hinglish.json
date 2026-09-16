@@ -191,11 +191,11 @@
   "home.on_leave_card_hint": "Aaj leave pe ho — check-in ki zarurat nahi.",
   "home.status_on_leave": "Leave pe",
   "home.break_take_title": "Break lo",
-  "home.break_take_hint": "45 min tak · shift mein ek baar",
+  "home.break_take_hint": "{minutes} min tak · shift mein ek baar",
   "home.break_on_title": "Break par",
   "home.break_in_progress_hint": "Thoda rest karo. Wapas aake End break dabao.",
   "home.break_remaining": "{cap} min me se {time} baaki",
-  "home.break_running": "Break chalu hai (max 45 min)",
+  "home.break_running": "Break chalu hai (max {minutes} min)",
   "home.break_over_title": "Break time khatam",
   "home.break_overrun": "{time} zyada ho gaya — ab break khatam karo",
   "home.break_end": "Break khatam karo",
@@ -483,5 +483,8 @@
   "home.strip.break_now": "ABHI BREAK",
   "home.break_at": "Break {window} par",
   "home.break_window_over": "Break ka time nikal gaya",
-  "home.today.not_started": "Aapka din abhi shuru nahi hua"
+  "home.today.not_started": "Aapka din abhi shuru nahi hua",
+  "home.break_label": "Break",
+  "home.on_shift_for": "aaj shift par",
+  "jobs.home.none_off_shift": "Abhi koi job nahi — job paane ke liye check in karein"
 }

@@ -190,11 +190,24 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('the shift card carries the date', (tester) async {
+  testWidgets('the shift card carries the hours, not the date', (
+    tester,
+  ) async {
     await _pump(tester, attendance: _offline());
 
-    // Moved off the greeting, onto the thing it is a record of.
-    expect(find.textContaining(RegExp(r'^[A-Z][a-z]{2}, \d+ ')), findsOneWidget);
+    // The date told a partner nothing they did not already know; the hours are
+    // what the status beside them is measured against.
+    expect(find.text('09:00 – 18:00'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^[A-Z][a-z]{2}, \d+ ')), findsNothing);
+  });
+
+  testWidgets('check-out does not shout', (tester) async {
+    await _pump(tester, attendance: _online());
+
+    // It sat under the clock as a full-width red slab — the loudest control on
+    // the card for the rarest thing a partner does all day.
+    expect(find.widgetWithText(FilledButton, 'Check out'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Check out'), findsOneWidget);
   });
 
   testWidgets('survives a small screen in Hindi', (tester) async {

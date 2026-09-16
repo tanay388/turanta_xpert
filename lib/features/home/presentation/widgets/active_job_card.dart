@@ -122,11 +122,7 @@ class _LiveBadge extends ConsumerWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.icon,
-    required this.text,
-    this.maxLines = 1,
-  });
+  const _DetailRow({required this.icon, required this.text, this.maxLines = 1});
 
   final IconData icon;
   final String text;

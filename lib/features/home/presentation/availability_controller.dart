@@ -112,9 +112,7 @@ class AttendanceState {
   bool get isOnLeaveToday => currentShift?.isOnLeave ?? false;
 
   bool get canAttemptCheckIn =>
-      !isCheckedIn &&
-      !isCheckInBlocked &&
-      (currentShift?.canCheckIn ?? true);
+      !isCheckedIn && !isCheckInBlocked && (currentShift?.canCheckIn ?? true);
 
   AttendanceState copyWith({
     AttendanceSnapshot? snapshot,
@@ -185,7 +183,8 @@ class AttendanceController extends Notifier<AttendanceState> {
     Map<String, dynamic>? breakSummary,
   ) {
     final used = breakSummary?['used'] == true;
-    final active = breakSummary?['breakStatus']?.toString() == 'ACTIVE' ||
+    final active =
+        breakSummary?['breakStatus']?.toString() == 'ACTIVE' ||
         breakSummary?['breakStatus']?.toString() == 'EXCEEDED';
     return AttendanceSnapshot(
       attendanceStatus: base.attendanceStatus,
@@ -250,7 +249,10 @@ class AttendanceController extends Notifier<AttendanceState> {
     try {
       final pos = await _position();
       if (pos == null) {
-        state = state.copyWith(loading: false, error: 'Location permission required');
+        state = state.copyWith(
+          loading: false,
+          error: 'Location permission required',
+        );
         return CheckInBlockedReason.gps;
       }
       await _api.checkIn(
@@ -300,10 +302,7 @@ class AttendanceController extends Notifier<AttendanceState> {
   Future<String?> startBreak() async {
     try {
       final pos = await _position();
-      await _api.startBreak(
-        latitude: pos?.latitude,
-        longitude: pos?.longitude,
-      );
+      await _api.startBreak(latitude: pos?.latitude, longitude: pos?.longitude);
       await refresh();
       return null;
     } on DioException catch (e) {
@@ -316,10 +315,7 @@ class AttendanceController extends Notifier<AttendanceState> {
   Future<String?> endBreak() async {
     try {
       final pos = await _position();
-      await _api.endBreak(
-        latitude: pos?.latitude,
-        longitude: pos?.longitude,
-      );
+      await _api.endBreak(latitude: pos?.latitude, longitude: pos?.longitude);
       await refresh();
       return null;
     } on DioException catch (e) {
@@ -349,12 +345,13 @@ class AttendanceController extends Notifier<AttendanceState> {
 
     final interval = Duration(seconds: snap.pingIntervalSeconds.clamp(30, 300));
     _pingTimer = Timer.periodic(interval, (_) => _sendPing());
-    _positionSub = Geolocator.getPositionStream(
-      locationSettings: _shiftLocationSettings(interval),
-    ).listen(
-      (position) => unawaited(_sendPing(position: position)),
-      onError: (Object err) => debugPrint('shift location stream: $err'),
-    );
+    _positionSub =
+        Geolocator.getPositionStream(
+          locationSettings: _shiftLocationSettings(interval),
+        ).listen(
+          (position) => unawaited(_sendPing(position: position)),
+          onError: (Object err) => debugPrint('shift location stream: $err'),
+        );
     unawaited(_sendPing());
   }
 
@@ -438,8 +435,8 @@ class AttendanceController extends Notifier<AttendanceState> {
   CheckInBlockedReason _mapBlocked(DioException e) {
     final code = _errorCode(e);
     return switch (code) {
-      'OUTSIDE_WORKING_HOURS' || 'CHECKIN_TOO_EARLY' =>
-        CheckInBlockedReason.tooEarly,
+      'OUTSIDE_WORKING_HOURS' ||
+      'CHECKIN_TOO_EARLY' => CheckInBlockedReason.tooEarly,
       'SHIFT_MISSED' => CheckInBlockedReason.shiftMissed,
       'OUTSIDE_ZONE' || 'GEOFENCE' => CheckInBlockedReason.geofence,
       'GPS_ACCURACY' => CheckInBlockedReason.gps,
@@ -465,7 +462,8 @@ class AttendanceController extends Notifier<AttendanceState> {
         return message['message']?.toString() ?? message.toString();
       }
       if (message is String) return message;
-      if (message is List && message.isNotEmpty) return message.first.toString();
+      if (message is List && message.isNotEmpty)
+        return message.first.toString();
     }
     return e.message ?? 'Request failed';
   }
@@ -473,8 +471,8 @@ class AttendanceController extends Notifier<AttendanceState> {
 
 final attendanceProvider =
     NotifierProvider<AttendanceController, AttendanceState>(
-  AttendanceController.new,
-);
+      AttendanceController.new,
+    );
 
 /// Back-compat for older home widgets that watched a bool.
 final availabilityProvider = Provider<bool>((ref) {

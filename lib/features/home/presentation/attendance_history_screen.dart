@@ -62,40 +62,41 @@ class _AttendanceHistoryScreenState
                 ],
               )
             : _error != null
-                ? ListView(
-                    padding: const EdgeInsets.all(XpertSpacing.lg),
-                    children: [
-                      Text(
-                        _error!,
-                        style: XpertTypography.caption
-                            .copyWith(color: XpertColors.danger),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: XpertSpacing.md),
-                      FilledButton(
-                        onPressed: _load,
-                        child: Text(ref.t('splash.retry')),
-                      ),
-                    ],
-                  )
-                : _items.isEmpty
-                    ? ListView(
-                        children: [
-                          const SizedBox(height: 80),
-                          Text(
-                            ref.t('attendance.empty'),
-                            style: XpertTypography.caption,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(XpertSpacing.lg),
-                        itemCount: _items.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: XpertSpacing.sm),
-                        itemBuilder: (_, i) => _HistoryCard(item: _items[i]),
-                      ),
+            ? ListView(
+                padding: const EdgeInsets.all(XpertSpacing.lg),
+                children: [
+                  Text(
+                    _error!,
+                    style: XpertTypography.caption.copyWith(
+                      color: XpertColors.danger,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: XpertSpacing.md),
+                  FilledButton(
+                    onPressed: _load,
+                    child: Text(ref.t('splash.retry')),
+                  ),
+                ],
+              )
+            : _items.isEmpty
+            ? ListView(
+                children: [
+                  const SizedBox(height: 80),
+                  Text(
+                    ref.t('attendance.empty'),
+                    style: XpertTypography.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              )
+            : ListView.separated(
+                padding: const EdgeInsets.all(XpertSpacing.lg),
+                itemCount: _items.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: XpertSpacing.sm),
+                itemBuilder: (_, i) => _HistoryCard(item: _items[i]),
+              ),
       ),
     );
   }
@@ -210,21 +211,21 @@ class _HistoryCard extends ConsumerWidget {
   ({String label, Color color}) _verdict(WidgetRef ref) {
     return switch (item.attendanceOutcome) {
       'PRESENT' => (
-          label: ref.t('attendance.outcome_present'),
-          color: XpertColors.success,
-        ),
+        label: ref.t('attendance.outcome_present'),
+        color: XpertColors.success,
+      ),
       'ABSENT' => (
-          label: ref.t('attendance.outcome_absent'),
-          color: XpertColors.danger,
-        ),
+        label: ref.t('attendance.outcome_absent'),
+        color: XpertColors.danger,
+      ),
       'LATE_CHECKIN' => (
-          label: ref.t('attendance.outcome_late_checkin'),
-          color: _warning,
-        ),
+        label: ref.t('attendance.outcome_late_checkin'),
+        color: _warning,
+      ),
       'EARLY_CHECKOUT' => (
-          label: ref.t('attendance.outcome_early_checkout'),
-          color: _warning,
-        ),
+        label: ref.t('attendance.outcome_early_checkout'),
+        color: _warning,
+      ),
       _ => _legacyStatus(ref),
     };
   }
@@ -232,21 +233,21 @@ class _HistoryCard extends ConsumerWidget {
   ({String label, Color color}) _legacyStatus(WidgetRef ref) {
     return switch (item.attendanceStatus) {
       'CHECKED_IN' => (
-          label: ref.t('attendance.status_checked_in'),
-          color: XpertColors.success,
-        ),
+        label: ref.t('attendance.status_checked_in'),
+        color: XpertColors.success,
+      ),
       'CHECKED_OUT' => (
-          label: ref.t('attendance.status_checked_out'),
-          color: XpertColors.muted,
-        ),
+        label: ref.t('attendance.status_checked_out'),
+        color: XpertColors.muted,
+      ),
       'AUTO_CHECKED_OUT' => (
-          label: ref.t('attendance.status_auto_out'),
-          color: _warning,
-        ),
+        label: ref.t('attendance.status_auto_out'),
+        color: _warning,
+      ),
       'ABSENT' => (
-          label: ref.t('attendance.status_absent'),
-          color: XpertColors.danger,
-        ),
+        label: ref.t('attendance.status_absent'),
+        color: XpertColors.danger,
+      ),
       _ => (label: item.attendanceStatus, color: XpertColors.muted),
     };
   }

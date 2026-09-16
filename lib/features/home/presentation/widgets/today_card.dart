@@ -32,7 +32,13 @@ class TodayCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: idle
           ? Row(
@@ -55,7 +61,7 @@ class TodayCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  data == null || data.earnings <= 0
+                  data.earnings <= 0
                       ? '—'
                       : '₹${data.earnings.toStringAsFixed(0)}',
                   style: XpertTypography.metric.copyWith(fontSize: 34),
@@ -71,7 +77,7 @@ class TodayCard extends ConsumerWidget {
                 Row(
                   children: [
                     _Stat(
-                      value: '${data?.jobsDone ?? 0}',
+                      value: '${data.jobsDone}',
                       label: ref.t('home.stats.jobs'),
                     ),
                     const _StatDivider(),
