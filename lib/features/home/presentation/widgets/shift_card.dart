@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/context_t.dart';
+import '../../../../core/models/partner_shift.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 import '../availability_controller.dart';
 import 'break_control.dart';
@@ -87,7 +88,8 @@ class ShiftCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = attendance.phase;
-    final hours = attendance.currentShift?.shift.displayWindow ?? '—';
+    final shift = attendance.currentShift?.shift;
+    final hours = shift?.displayWindow ?? '—';
     final opensAt = attendance.currentShift?.allowedCheckinFrom;
 
     final statusColor = switch (phase) {
@@ -149,14 +151,14 @@ class ShiftCard extends ConsumerWidget {
     final startedAt = attendance.snapshot?.sessionStartedAt;
 
     return Container(
-      padding: const EdgeInsets.all(XpertSpacing.lg),
+      padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
         boxShadow: [
-          // Tinted to the page behind it rather than a grey wash, so the hero
-          // lifts without looking like it is floating in smoke.
+          // Tinted to the page behind it rather than a grey wash, so the card
+          // lifts without looking like it is floating in smoke. The border it
+          // used to carry as well made two separations doing one job.
           BoxShadow(
             color: XpertColors.canvas.withValues(alpha: 0.05),
             blurRadius: 18,
@@ -169,13 +171,16 @@ class ShiftCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              // Flexible, because "Account inactive" in Marathi plus the date
-              // does not fit a 360pt row.
-              Flexible(
-                child: _StatusPill(color: statusColor, label: statusLabel),
+              // Expanded and aligned, not Flexible beside a Spacer: both take
+              // flex 1, so they split the row and truncated "Checked out" to
+              // "Checked …" with half the width standing empty.
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _StatusPill(color: statusColor, label: statusLabel),
+                ),
               ),
               const SizedBox(width: XpertSpacing.sm),
-              const Spacer(),
               if (attendance.loading)
                 const SizedBox(
                   width: 18,
@@ -198,6 +203,10 @@ class ShiftCard extends ConsumerWidget {
           ],
           const SizedBox(height: XpertSpacing.sm),
           Text(subtitle, style: XpertTypography.caption),
+          if (shift != null) ...[
+            const SizedBox(height: XpertSpacing.md),
+            _DayStrip(shift: shift),
+          ],
           // A finished day gets no button, so it gets no gap under the text
           // either — the card just stops.
           if (showsCheckInButton || isCheckedIn)
@@ -312,6 +321,136 @@ class _JobLockNote extends StatelessWidget {
 
 /// Status as one object rather than a loose dot beside loose text — it reads
 /// as a state, and it survives being glanced at from a stairwell.
+/// The shape of the day in one line: the hours worked, and when the break
+/// falls inside them.
+///
+/// Both were things a partner had to already know. The break especially — it
+/// is set by ops on the shift, so until it was shown here the only way to find
+/// out when lunch was, was to ask.
+class _DayStrip extends ConsumerWidget {
+  const _DayStrip({required this.shift});
+
+  final PartnerShift shift;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final breakLabel = shift.breakWindowLabel;
+    final state = shift.breakStateAt();
+    final isNow = state == BreakWindowState.now;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.sm + 2,
+        vertical: XpertSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: XpertColors.background,
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StripItem(
+              icon: Icons.schedule_rounded,
+              label: ref.t('home.strip.shift'),
+              value: shift.compactWindowLabel,
+            ),
+          ),
+          if (breakLabel != null) ...[
+            Container(
+              width: 1,
+              height: 26,
+              margin: const EdgeInsets.symmetric(
+                horizontal: XpertSpacing.sm,
+              ),
+              color: XpertColors.border.withValues(alpha: 0.4),
+            ),
+            Expanded(
+              child: _StripItem(
+                icon: Icons.free_breakfast_rounded,
+                // Named while it is happening, so a partner glancing down
+                // mid-shift gets the answer and not just the schedule.
+                label: isNow
+                    ? ref.t('home.strip.break_now')
+                    : ref.t('home.strip.break'),
+                value: breakLabel,
+                accent: isNow,
+                dimmed: state == BreakWindowState.passed,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StripItem extends StatelessWidget {
+  const _StripItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.accent = false,
+    this.dimmed = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool accent;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = accent
+        ? XpertColors.heroAccent
+        : dimmed
+        ? XpertColors.muted
+        : XpertColors.onSurface;
+
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: accent ? XpertColors.heroAccent : XpertColors.muted,
+        ),
+        const SizedBox(width: XpertSpacing.xs),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: XpertTypography.caption.copyWith(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: accent ? XpertColors.heroAccent : XpertColors.muted,
+                ),
+              ),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  color: ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.color, required this.label});
 

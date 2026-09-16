@@ -477,5 +477,8 @@
   "jobs.close_no_otp.reason.other": "Anya",
   "jobs.close_no_otp.note_hint": "Bataiye kya hua",
   "jobs.close_no_otp.notice": "Is job ki aapki earning par koi asar nahi. Yeh close record hota hai aur team review karti hai.",
-  "jobs.close_no_otp.cta": "Job close karein"
+  "jobs.close_no_otp.cta": "Job close karein",
+  "home.strip.shift": "SHIFT",
+  "home.strip.break": "BREAK",
+  "home.strip.break_now": "ABHI BREAK"
 }

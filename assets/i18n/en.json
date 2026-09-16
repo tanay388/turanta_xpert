@@ -477,5 +477,8 @@
   "jobs.close_no_otp.reason.other": "Other",
   "jobs.close_no_otp.note_hint": "Tell us what happened",
   "jobs.close_no_otp.notice": "Your earning for this job is unaffected. The close is recorded and reviewed by our team.",
-  "jobs.close_no_otp.cta": "Close job"
+  "jobs.close_no_otp.cta": "Close job",
+  "home.strip.shift": "SHIFT",
+  "home.strip.break": "BREAK",
+  "home.strip.break_now": "BREAK NOW"
 }
