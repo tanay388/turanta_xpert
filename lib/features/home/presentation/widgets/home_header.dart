@@ -90,6 +90,19 @@ class HomeHeader extends ConsumerWidget {
                 _EmergencyButton(
                   onTap: onEmergency,
                   label: ref.t('home.emergency'),
+                )
+              else
+                // Off shift the SOS slot is empty, which is exactly when
+                // "ready for work" is worth saying. On shift it gives the
+                // space back rather than competing with the button.
+                Image.asset(
+                  'assets/images/hero_asset.png',
+                  height: 96,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  cacheHeight: 288,
+                  excludeFromSemantics: true,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
             ],
           ),

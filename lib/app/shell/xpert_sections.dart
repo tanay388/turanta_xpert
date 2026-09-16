@@ -42,12 +42,20 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.body,
     this.action,
+    this.image,
+    this.imageHeight = 168,
   });
 
+  /// Fallback when there is no [image] — still the right answer for the many
+  /// small empty states that do not warrant an illustration.
   final IconData icon;
   final String title;
   final String body;
   final Widget? action;
+
+  /// Illustration asset path. Replaces the icon badge when given.
+  final String? image;
+  final double imageHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -63,16 +71,29 @@ class EmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
         Center(
-          child: Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: XpertColors.secondary,
-              borderRadius: BorderRadius.circular(XpertRadius.xl),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 30, color: XpertColors.primary),
-          ),
+          child: image == null
+              ? Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: XpertColors.secondary,
+                    borderRadius: BorderRadius.circular(XpertRadius.xl),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 30, color: XpertColors.primary),
+                )
+              : Image.asset(
+                  image!,
+                  height: imageHeight,
+                  fit: BoxFit.contain,
+                  // Decoded at the size it is drawn, not the 900px source.
+                  cacheHeight: (imageHeight * 3).round(),
+                  errorBuilder: (_, _, _) => Icon(
+                    icon,
+                    size: 44,
+                    color: XpertColors.primary,
+                  ),
+                ),
         ),
         const SizedBox(height: XpertSpacing.lg),
         Text(

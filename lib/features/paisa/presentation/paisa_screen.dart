@@ -74,6 +74,7 @@ class PaisaScreen extends ConsumerWidget {
                 if (previous.isEmpty) {
                   return EmptyState(
                     icon: Icons.account_balance_wallet_outlined,
+                    image: 'assets/images/earning_on_the_way.png',
                     title: ref.t('paisa.empty.title'),
                     body: ref.t('paisa.empty.body'),
                   );

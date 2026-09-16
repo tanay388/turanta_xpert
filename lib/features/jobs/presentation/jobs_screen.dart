@@ -85,6 +85,7 @@ class _ActiveJobsList extends ConsumerWidget {
               children: [
                 EmptyState(
                   icon: Icons.work_outline_rounded,
+                  image: 'assets/images/no_job_scheduled.png',
                   title: ref.t('jobs.empty.active.title'),
                   body: ref.t('jobs.empty.active.body'),
                 ),
