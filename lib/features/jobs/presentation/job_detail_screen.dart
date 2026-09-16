@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../home/presentation/availability_controller.dart';
@@ -18,20 +16,17 @@ import '../../../core/notifications/push_providers.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../data/jobs_api.dart';
 import 'jobs_controller.dart';
-import 'live_job_timer.dart';
 import 'widgets/close_without_otp_sheet.dart';
+import 'widgets/job_detail_sections.dart';
+import 'widgets/job_hero.dart';
 import 'widgets/job_otp_field.dart';
-import 'widgets/job_service_icon.dart';
 
 /// One job, from a partner standing at the customer's door.
 ///
-/// The code entry — the only reason this screen has to be open at that moment
-/// — used to be the last thing in a scrolling list, so on a long job it was
-/// below the fold. It is now pinned to the bottom and cannot scroll away.
-///
-/// The customer's phone number was printed as text with nothing to tap. A
-/// partner outside a locked gate needs to call, not read out digits into
-/// another app.
+/// Laid out like the customer's booking screen: the stage as a headline on the
+/// wash, the facts on a white sheet over it, and the code entry pinned to the
+/// bottom — the only reason this screen has to be open at the door, so it
+/// cannot scroll away.
 class JobDetailScreen extends ConsumerStatefulWidget {
   const JobDetailScreen({super.key, required this.jobId});
 
@@ -119,7 +114,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   /// warns rather than blocks, and it stays silent when it has nothing solid
   /// to compare: no fix, or a job with no coordinates. The OTP remains the
   /// actual proof the partner is at the door.
-  Future<bool> _confirmStartAtDistance(PartnerJob job, Position? position) async {
+  Future<bool> _confirmStartAtDistance(
+    PartnerJob job,
+    Position? position,
+  ) async {
     final jobLat = job.latitude;
     final jobLng = job.longitude;
     if (position == null || jobLat == null || jobLng == null) return true;
@@ -190,9 +188,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       ref.invalidate(partnerJobProvider(widget.jobId));
       await ref.read(jobsProvider.notifier).refresh();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.t('jobs.complete.success'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ref.t('jobs.complete.success'))));
     } on DioException catch (e) {
       final msg = _dioMessage(e) ?? ref.t('jobs.error.generic');
       if (mounted) {
@@ -362,8 +360,12 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     });
 
     return Scaffold(
-      backgroundColor: XpertColors.background,
+      // White, not grey: the sheet runs to the bottom of the screen, and the
+      // app bar sits on the top of the hero's wash.
+      backgroundColor: XpertColors.surface,
       appBar: AppBar(
+        backgroundColor: XpertColors.heroTop,
+        surfaceTintColor: Colors.transparent,
         title: Text(ref.t('jobs.detail.title')),
         actions: [
           // This screen is pushed over the shell, so the Home header's SOS is
@@ -447,441 +449,81 @@ class _Body extends ConsumerWidget {
     final customer = (job.customerName ?? '').trim();
     final address = job.displayAddress;
     final hasMap = job.latitude != null && job.longitude != null;
+    final live = job.isAssigned || job.isInProgress;
+    final earning = job.partnerEarning ?? 0;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        XpertSpacing.lg,
-        XpertSpacing.lg,
-        XpertSpacing.lg,
-        XpertSpacing.xl,
+    final sections = <Widget>[
+      JobSection(
+        title: ref.t('jobs.detail.section.job'),
+        child: JobSummaryRow(job: job),
       ),
-      children: [
-        Row(
-          children: [
-            JobServiceIcon(job: job, size: 46),
-            const SizedBox(width: XpertSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    job.serviceName ?? ref.t('jobs.service_fallback'),
-                    style: XpertTypography.title.copyWith(fontSize: 19),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    DateFormat(
-                      'EEE, d MMM · h:mm a',
-                    ).format(job.scheduledStartAt.toLocal()),
-                    style: XpertTypography.caption.copyWith(fontSize: 12.5),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: XpertSpacing.md),
-        // The detail screen never said what state the job was in — only the
-        // list did.
-        Align(alignment: Alignment.centerLeft, child: _StatusPill(job: job)),
-        if (job.isInProgress) ...[
-          const SizedBox(height: XpertSpacing.lg),
-          LiveJobTimerCard(job: job),
-        ],
-        const SizedBox(height: XpertSpacing.xl),
-        // Duration and earning are numbers, so they are set as numbers rather
-        // than as two more label-over-value rows in a list of five.
-        Row(
-          children: [
-            Expanded(
-              child: _Metric(
-                label: ref.t('jobs.duration'),
-                value: '${_hours(job.durationMinutes)} hr',
-              ),
-            ),
-            const SizedBox(width: XpertSpacing.sm),
-            Expanded(
-              child: _Metric(
-                label: (job.isCompleted || job.isNoShow)
-                    ? ref.t('jobs.earning.label')
-                    : ref.t('jobs.earning.estimated_label'),
-                value: (job.partnerEarning ?? 0) <= 0
-                    ? '—'
-                    : '₹${job.partnerEarning!.toStringAsFixed(0)}',
-              ),
-            ),
-          ],
-        ),
-        // Calling is bridged server-side and only while the job is live, so
-        // the card earns its place when there is a name to show or a call to
-        // place — not on a closed job with a masked customer.
-        if (customer.isNotEmpty || job.isAssigned || job.isInProgress) ...[
-          const SizedBox(height: XpertSpacing.xl),
-          SectionLabel(ref.t('jobs.customer')),
-          const SizedBox(height: XpertSpacing.sm),
-          _ContactCard(
+      // Calling is bridged server-side and only while the job is live, so the
+      // block earns its place when there is a name to show or a call to place
+      // — not on a closed job with a masked customer.
+      if (customer.isNotEmpty || live)
+        JobSection(
+          title: ref.t('jobs.customer'),
+          child: JobCustomerRow(
             name: customer.isEmpty ? ref.t('jobs.customer') : customer,
-            onCall: (job.isAssigned || job.isInProgress) ? onCall : null,
+            onCall: live ? onCall : null,
             calling: calling,
           ),
-        ],
-        // Only while there is still somewhere to go. Once a job is closed the
-        // address is a customer's home address with nothing to do with it —
-        // and Copy and Navigate below it are actions on a finished job.
-        if (address.isNotEmpty && !job.isClosed) ...[
-          const SizedBox(height: XpertSpacing.xl),
-          SectionLabel(ref.t('jobs.address')),
-          const SizedBox(height: XpertSpacing.sm),
-          _AddressCard(
+        ),
+      // Only while there is still somewhere to go. Once a job is closed the
+      // address is a customer's home with nothing to do with it.
+      if (address.isNotEmpty && !job.isClosed)
+        JobSection(
+          title: ref.t('jobs.address'),
+          child: JobAddressBlock(
             address: address,
             onNavigate: hasMap ? onNavigate : null,
           ),
-        ],
-        if (job.hasReview) ...[
-          const SizedBox(height: XpertSpacing.xl),
-          SectionLabel(ref.t('jobs.review.title')),
-          const SizedBox(height: XpertSpacing.sm),
-          _ReviewCard(job: job),
-        ],
-      ],
-    );
-  }
-}
+        ),
+      if (job.hasReview)
+        JobSection(
+          title: ref.t('jobs.review.title'),
+          child: JobRatingBlock(job: job),
+        ),
+    ];
 
-String _hours(int minutes) {
-  final hours = minutes / 60;
-  return hours % 1 == 0 ? hours.toStringAsFixed(0) : hours.toStringAsFixed(1);
-}
-
-class _StatusPill extends ConsumerWidget {
-  const _StatusPill({required this.job});
-
-  final PartnerJob job;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final (color, key) = job.isInProgress
-        ? (XpertColors.primary, 'jobs.status.in_progress')
-        : job.isCompleted
-        ? (XpertColors.success, 'jobs.status.completed')
-        : job.isNoShow
-        ? (XpertColors.danger, 'jobs.status.no_show')
-        : (const Color(0xFFF57C00), 'jobs.status.assigned');
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(XpertRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          // Flexible even inside an Align: the pill is sized by its label, and
-          // a translated status can be wider than the screen.
-          Flexible(
-            child: Text(
-              ref.t(key).toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-                color: color,
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      children: [
+        JobHero(job: job),
+        // Pulled up onto the hero so the sheet's corners curve over the wash;
+        // the hero reserves the same amount at its bottom.
+        Transform.translate(
+          offset: const Offset(0, -jobSheetOverlap),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: XpertColors.surface,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(XpertRadius.sheetTop),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: XpertTypography.metric.copyWith(fontSize: 20),
-            maxLines: 1,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: XpertTypography.caption.copyWith(fontSize: 12),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The customer, with a way to reach them. The number itself is deliberately
-/// absent: calls are bridged through the Turanta line, so a partner never sees
-/// (or keeps) a customer's personal number.
-class _ContactCard extends ConsumerWidget {
-  const _ContactCard({
-    required this.name,
-    required this.onCall,
-    required this.calling,
-  });
-
-  final String name;
-  final VoidCallback? onCall;
-  final bool calling;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: XpertColors.secondary,
-              borderRadius: BorderRadius.circular(XpertRadius.md),
+            padding: const EdgeInsets.fromLTRB(
+              XpertSpacing.lg,
+              XpertSpacing.xl,
+              XpertSpacing.lg,
+              XpertSpacing.lg,
             ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.person_outline_rounded,
-              size: 20,
-              color: XpertColors.onSurface,
-            ),
-          ),
-          const SizedBox(width: XpertSpacing.md),
-          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  name,
-                  style: XpertTypography.label.copyWith(fontSize: 15),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (onCall != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    ref.t('jobs.customer.number_private'),
-                    style: XpertTypography.metric.copyWith(
-                      fontSize: 13,
-                      color: XpertColors.muted,
-                    ),
-                  ),
+                if (job.isCompleted && earning > 0) ...[
+                  JobEarnedCard(amount: earning),
+                  const SizedBox(height: XpertSpacing.xl),
+                ],
+                for (var i = 0; i < sections.length; i++) ...[
+                  if (i > 0) const JobDivider(),
+                  sections[i],
                 ],
               ],
             ),
           ),
-          if (onCall != null) ...[
-            const SizedBox(width: XpertSpacing.sm),
-            Semantics(
-              button: true,
-              label: ref.t('jobs.call'),
-              child: Material(
-                color: XpertColors.success.withValues(alpha: 0.12),
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: calling ? null : onCall,
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: calling
-                        ? const Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: XpertColors.success,
-                              ),
-                            ),
-                          )
-                        : const Icon(
-                            Icons.call_rounded,
-                            size: 20,
-                            color: XpertColors.success,
-                          ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _AddressCard extends ConsumerWidget {
-  const _AddressCard({required this.address, required this.onNavigate});
-
-  final String address;
-  final VoidCallback? onNavigate;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 18,
-                color: XpertColors.primary,
-              ),
-              const SizedBox(width: XpertSpacing.sm),
-              Expanded(
-                child: Text(
-                  address,
-                  style: XpertTypography.body.copyWith(
-                    fontSize: 14.5,
-                    height: 1.45,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: XpertSpacing.md),
-          Row(
-            children: [
-              // Copyable, because half the time the destination gets pasted
-              // into whichever maps app the partner actually uses.
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: address));
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(ref.t('jobs.address.copied'))),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 17),
-                  // Neither button ellipsises on its own, and both labels grow
-                  // in Hindi and Marathi.
-                  label: Text(
-                    ref.t('jobs.address.copy'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-              if (onNavigate != null) ...[
-                const SizedBox(width: XpertSpacing.sm),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: onNavigate,
-                    icon: const Icon(Icons.directions_rounded, size: 17),
-                    label: Text(
-                      ref.t('jobs.navigate'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends ConsumerWidget {
-  const _ReviewCard({required this.job});
-
-  final PartnerJob job;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final note = (job.reviewNote ?? '').trim();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(XpertSpacing.md),
-      decoration: BoxDecoration(
-        color: XpertColors.surface,
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              for (var i = 1; i <= 5; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: 2),
-                  child: Icon(
-                    i <= (job.reviewStars ?? 0)
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    size: 20,
-                    color: i <= (job.reviewStars ?? 0)
-                        ? const Color(0xFFF5A623)
-                        : XpertColors.border,
-                  ),
-                ),
-            ],
-          ),
-          if (note.isNotEmpty) ...[
-            const SizedBox(height: XpertSpacing.sm),
-            Text(
-              note,
-              style: XpertTypography.body.copyWith(
-                fontSize: 14,
-                height: 1.45,
-              ),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -914,11 +556,20 @@ class _ActionFooter extends ConsumerWidget {
         XpertSpacing.lg,
         XpertSpacing.md,
         XpertSpacing.lg,
-        XpertSpacing.md + MediaQuery.viewInsetsOf(context).bottom,
+        XpertSpacing.sm + MediaQuery.viewInsetsOf(context).bottom,
       ),
       decoration: const BoxDecoration(
         color: XpertColors.surface,
-        border: Border(top: BorderSide(color: Color(0xFFE8EDF1))),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(XpertRadius.xl),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1A0B1720),
+            blurRadius: 24,
+            offset: Offset(0, -6),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -930,7 +581,10 @@ class _ActionFooter extends ConsumerWidget {
                   ? ref.t('jobs.start.otp_hint')
                   : ref.t('jobs.complete.otp_hint'),
               textAlign: TextAlign.center,
-              style: XpertTypography.caption.copyWith(fontSize: 13),
+              style: XpertTypography.label.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: XpertSpacing.md),
             JobOtpField(
@@ -941,10 +595,15 @@ class _ActionFooter extends ConsumerWidget {
             ),
             const SizedBox(height: XpertSpacing.md),
             SizedBox(
-              height: 54,
+              height: 52,
               width: double.infinity,
               child: FilledButton(
                 onPressed: busy ? null : onSubmit,
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(XpertRadius.pill),
+                  ),
+                ),
                 child: busy
                     ? const SizedBox(
                         width: 22,
@@ -971,9 +630,7 @@ class _ActionFooter extends ConsumerWidget {
               const SizedBox(height: XpertSpacing.xs),
               TextButton(
                 onPressed: busy ? null : onCloseWithoutOtp,
-                style: TextButton.styleFrom(
-                  foregroundColor: XpertColors.muted,
-                ),
+                style: TextButton.styleFrom(foregroundColor: XpertColors.muted),
                 child: Text(
                   ref.t('jobs.close_no_otp.link'),
                   style: const TextStyle(

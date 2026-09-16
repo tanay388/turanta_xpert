@@ -19,8 +19,9 @@ PartnerJob _job({
   String? phone = '+919876543210',
   double? lat = 19.076,
   int? stars,
+  Duration startsIn = const Duration(hours: 2),
 }) {
-  final start = DateTime.now().add(const Duration(hours: 2));
+  final start = DateTime.now().add(startsIn);
   return PartnerJob(
     id: 1,
     status: status,
@@ -154,15 +155,47 @@ void main() {
   testWidgets('the job says what state it is in', (tester) async {
     await _pump(tester, job: _job(status: 'IN_PROGRESS'));
 
-    // Only the list screen used to show this.
-    expect(find.text('IN PROGRESS'), findsOneWidget);
+    // It used to be a caption-sized pill; the stage is the headline now.
+    expect(find.text('Job in progress'), findsOneWidget);
+  });
+
+  testWidgets('an upcoming job leads with when it starts', (tester) async {
+    await _pump(tester, job: _job());
+
+    expect(find.textContaining('Starts in'), findsOneWidget);
+    expect(find.text('Running late'), findsNothing);
+  });
+
+  testWidgets('a job past its start says the partner is running late', (
+    tester,
+  ) async {
+    await _pump(tester, job: _job(startsIn: const Duration(minutes: -10)));
+
+    expect(find.text('Running late'), findsOneWidget);
+    expect(find.textContaining('Starts in'), findsNothing);
+  });
+
+  testWidgets('a finished job leads with what it earned, once', (tester) async {
+    await _pump(tester, job: _job(status: 'COMPLETED'));
+
+    expect(find.text('Earned for this job'), findsOneWidget);
+    expect(find.text('₹260'), findsOneWidget);
+  });
+
+  testWidgets('a no-show does not promise the booked estimate', (tester) async {
+    await _pump(tester, job: _job(status: 'NO_SHOW'));
+
+    // The server fills partnerEarning with the booked estimate when nothing
+    // was settled, and a no-show settles nothing.
+    expect(find.text('₹260'), findsNothing);
+    expect(find.text('Marked as a no-show'), findsOneWidget);
   });
 
   testWidgets('a finished job offers no code entry', (tester) async {
     await _pump(tester, job: _job(status: 'COMPLETED', stars: 4));
 
     expect(find.byType(JobOtpField), findsNothing);
-    expect(find.text('COMPLETED'), findsOneWidget);
+    expect(find.text('Job completed'), findsOneWidget);
     // Four filled stars out of five.
     expect(find.byIcon(Icons.star_rounded), findsNWidgets(4));
     expect(find.byIcon(Icons.star_outline_rounded), findsOneWidget);
