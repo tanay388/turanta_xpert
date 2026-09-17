@@ -5,6 +5,7 @@ import '../../../app/shell/xpert_screen_scaffold.dart';
 import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
+import '../../../core/utils/rupees.dart';
 import '../data/performance_api.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/rate_ladder.dart';
@@ -64,6 +65,12 @@ class TargetScreen extends ConsumerWidget {
               ),
               const SizedBox(height: XpertSpacing.xl),
               SectionLabel(ref.t('target.metrics.title')),
+              const SizedBox(height: 3),
+              // Which of these moves the money, and which are simply the job.
+              Text(
+                ref.t('target.metrics.hint'),
+                style: XpertTypography.caption.copyWith(fontSize: 12.5),
+              ),
               const SizedBox(height: XpertSpacing.sm),
               // Four independent readings of the same cycle — a grid reads
               // them at a glance, where a stack asks you to go down the list.
@@ -73,13 +80,12 @@ class TargetScreen extends ConsumerWidget {
                 // A fixed height, not an aspect ratio: the tile's content is
                 // the same four lines on every device, so tying its height to
                 // the screen width just clipped it on narrow phones.
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: XpertSpacing.sm,
-                      crossAxisSpacing: XpertSpacing.sm,
-                      mainAxisExtent: 124,
-                    ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: XpertSpacing.sm,
+                  crossAxisSpacing: XpertSpacing.sm,
+                  mainAxisExtent: 124,
+                ),
                 children: [
                   MetricTile(
                     label: ref.t('target.metric.rating'),
@@ -111,8 +117,8 @@ class TargetScreen extends ConsumerWidget {
   }
 }
 
-/// What an hour earns right now, with the rating that bought it underneath —
-/// and, when there is one, the exact step to the next rate.
+/// What an hour earns right now, the rating that bought it, and the one step
+/// to the next rate.
 class _RateHero extends ConsumerWidget {
   const _RateHero({required this.perf});
 
@@ -126,133 +132,189 @@ class _RateHero extends ConsumerWidget {
     final gap = (next != null && rating != null)
         ? (next.minRating - rating).clamp(0.0, 5.0)
         : null;
+    final band = perf.currentBandLabel ?? '';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.heroCard,
+        color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            ref.t('target.rate_band.current').toUpperCase(),
-            style: XpertTypography.eyebrow,
-          ),
-          const SizedBox(height: 6),
-          // Wrap, not Row: two flex children split the width evenly, and on a
-          // 320pt screen half of it is narrower than the rate itself. Letting
-          // the rating drop to a second line beats squeezing both.
-          Wrap(
-            spacing: XpertSpacing.md,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    rate != null && rate > 0
-                        ? '₹${rate.toStringAsFixed(0)}'
-                        : '—',
-                    style: XpertTypography.metric.copyWith(
-                      fontSize: 34,
-                      color: XpertColors.onSurface,
-                    ),
+              Expanded(
+                child: Text(
+                  ref.t('target.rate_band.current').toUpperCase(),
+                  style: XpertTypography.eyebrow.copyWith(
+                    color: XpertColors.muted,
+                    letterSpacing: 1.2,
                   ),
-                  const SizedBox(width: 4),
-                  // Flexible inside the wrapped row too: the rating can move
-                  // to its own line, but this label still has to fit beside
-                  // the number on the line it shares.
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (band.isNotEmpty) ...[
+                const SizedBox(width: XpertSpacing.sm),
+                _BandChip(label: band),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                rate != null && rate > 0 ? rupees(rate) : '—',
+                style: XpertTypography.metric.copyWith(fontSize: 34),
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  ref.t('paisa.per_hour'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: XpertColors.muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // On its own line, not beside the rate: the rating and its count
+          // together are wider than half a 320pt screen once translated.
+          if (rating != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.star_rounded,
+                  size: 18,
+                  color: Color(0xFFF2A81D),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  rating.toStringAsFixed(1),
+                  style: XpertTypography.metric.copyWith(fontSize: 20),
+                ),
+                if (perf.ratingCount > 0) ...[
+                  const SizedBox(width: 5),
                   Flexible(
                     child: Text(
-                      ref.t('paisa.per_hour'),
+                      ref.t('target.rating_from', {
+                        'count': '${perf.ratingCount}',
+                      }),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
                         color: XpertColors.muted,
                       ),
                     ),
                   ),
                 ],
-              ),
-              if (rating != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 18,
-                      color: Color(0xFFF5A623),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: XpertTypography.metric.copyWith(
-                        fontSize: 20,
-                        color: XpertColors.onSurface,
-                      ),
-                    ),
-                    if (perf.ratingCount > 0) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${perf.ratingCount})',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: XpertColors.muted,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-            ],
-          ),
+              ],
+            ),
+          ],
           // The one line on the screen that says what to do next, rather than
           // how things stand.
           if (next != null && gap != null && gap > 0) ...[
             const SizedBox(height: XpertSpacing.md),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: XpertSpacing.sm,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: XpertColors.primary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(XpertRadius.md),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.trending_up_rounded,
-                    size: 15,
-                    color: XpertColors.heroAccent,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      ref.t('target.next_step', {
-                        'gap': gap.toStringAsFixed(1),
-                        'rate': next.ratePerHour.toStringAsFixed(0),
-                      }),
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
-                        color: XpertColors.heroAccent,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _Note(
+              icon: Icons.trending_up_rounded,
+              color: XpertColors.heroAccent,
+              text: ref.t('target.next_step', {
+                'gap': gap.toStringAsFixed(1),
+                'rate': next.ratePerHour.toStringAsFixed(0),
+              }),
+            ),
+          ] else if (next == null && rate != null && rate > 0) ...[
+            const SizedBox(height: XpertSpacing.md),
+            _Note(
+              icon: Icons.workspace_premium_rounded,
+              color: XpertColors.success,
+              text: ref.t('target.top_band'),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BandChip extends StatelessWidget {
+  const _BandChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: XpertColors.heroCard,
+        borderRadius: BorderRadius.circular(XpertRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: XpertColors.heroAccent,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _Note extends StatelessWidget {
+  const _Note({required this.icon, required this.color, required this.text});
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.sm,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
         ],
       ),
     );

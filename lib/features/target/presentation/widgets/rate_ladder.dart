@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/i18n/context_t.dart';
 import '../../../../core/theme/xpert_tokens.dart';
+import '../../../../core/utils/rupees.dart';
 import '../../data/performance_api.dart';
 
 /// The rating → rate/hour ladder, drawn as a ladder.
@@ -33,7 +34,13 @@ class RateLadder extends ConsumerWidget {
         decoration: BoxDecoration(
           color: XpertColors.surface,
           borderRadius: BorderRadius.circular(XpertRadius.lg),
-          border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D0B1720),
+              blurRadius: 14,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Text(
           ref.t('target.ladder.empty'),
@@ -51,7 +58,13 @@ class RateLadder extends ConsumerWidget {
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -60,6 +73,8 @@ class RateLadder extends ConsumerWidget {
             _Rung(
               band: rungs[i],
               isNext: identical(rungs[i], nextBand),
+              // Everything below the band you are in, you have already passed.
+              isReached: rungs.indexWhere((b) => b.current) <= i,
               isFirst: i == 0,
               isLast: i == rungs.length - 1,
               rating: rating,
@@ -74,6 +89,7 @@ class _Rung extends ConsumerWidget {
   const _Rung({
     required this.band,
     required this.isNext,
+    required this.isReached,
     required this.isFirst,
     required this.isLast,
     required this.rating,
@@ -81,6 +97,7 @@ class _Rung extends ConsumerWidget {
 
   final RateLadderBand band;
   final bool isNext;
+  final bool isReached;
   final bool isFirst;
   final bool isLast;
   final double? rating;
@@ -88,10 +105,8 @@ class _Rung extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = band.current;
-    final accent = current
-        ? XpertColors.primary
-        : isNext
-        ? XpertColors.primary
+    final accent = current || isNext
+        ? XpertColors.heroAccent
         : XpertColors.border;
 
     // How much more rating this rung costs. Only worth saying for the one you
@@ -102,7 +117,7 @@ class _Rung extends ConsumerWidget {
 
     return Container(
       color: current
-          ? XpertColors.primary.withValues(alpha: 0.06)
+          ? XpertColors.heroAccent.withValues(alpha: 0.07)
           : Colors.transparent,
       padding: const EdgeInsets.symmetric(
         horizontal: XpertSpacing.md,
@@ -130,13 +145,26 @@ class _Rung extends ConsumerWidget {
                         : XpertColors.border.withValues(alpha: 0.5),
                   ),
                   Container(
-                    width: current ? 14 : 10,
-                    height: current ? 14 : 10,
+                    width: current ? 16 : 10,
+                    height: current ? 16 : 10,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: current ? accent : XpertColors.surface,
+                      // Filled for the rungs you stand on or have passed,
+                      // hollow for the ones still above you.
+                      color: current
+                          ? accent
+                          : isReached
+                          ? XpertColors.border
+                          : XpertColors.surface,
                       border: Border.all(color: accent, width: 2),
                     ),
+                    child: current
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 10,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
                   Expanded(
                     child: Container(
@@ -172,11 +200,11 @@ class _Rung extends ConsumerWidget {
                       ),
                       const SizedBox(width: XpertSpacing.sm),
                       Text(
-                        '₹${band.ratePerHour.toStringAsFixed(0)}',
+                        rupees(band.ratePerHour),
                         style: XpertTypography.metric.copyWith(
                           fontSize: 16,
                           color: current
-                              ? XpertColors.primary
+                              ? XpertColors.heroAccent
                               : XpertColors.onSurface,
                         ),
                       ),
@@ -198,7 +226,7 @@ class _Rung extends ConsumerWidget {
                         Flexible(
                           child: _Tag(
                             label: ref.t('target.rate_band.you'),
-                            color: XpertColors.primary,
+                            color: XpertColors.heroAccent,
                             filled: true,
                           ),
                         )
@@ -210,7 +238,7 @@ class _Rung extends ConsumerWidget {
                                 : ref.t('target.ladder.gap', {
                                     'gap': gap.toStringAsFixed(1),
                                   }),
-                            color: XpertColors.primary,
+                            color: XpertColors.heroAccent,
                             filled: false,
                           ),
                         ),
@@ -238,7 +266,7 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: filled ? color.withValues(alpha: 0.16) : Colors.transparent,
+        color: filled ? color : Colors.transparent,
         borderRadius: BorderRadius.circular(XpertRadius.pill),
         border: filled ? null : Border.all(color: color.withValues(alpha: 0.5)),
       ),
@@ -247,9 +275,9 @@ class _Tag extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
-          color: color,
+          color: filled ? Colors.white : color,
         ),
       ),
     );

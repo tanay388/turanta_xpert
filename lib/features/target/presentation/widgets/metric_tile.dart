@@ -40,7 +40,7 @@ class MetricTile extends ConsumerWidget {
 
     // Off-target is the only state that earns a colour. On-target is simply
     // how things are supposed to be, so it stays quiet.
-    final accent = ok ? XpertColors.primary : const Color(0xFFF57C00);
+    final accent = ok ? XpertColors.heroAccent : XpertColors.warning;
 
     return Container(
       padding: const EdgeInsets.all(XpertSpacing.md),
@@ -65,7 +65,10 @@ class MetricTile extends ConsumerWidget {
                     // tiles put a caption on top and the number below it.
                     Text(
                       value == null ? '—' : value.toStringAsFixed(decimals),
-                      style: XpertTypography.metric.copyWith(fontSize: 24),
+                      style: XpertTypography.metric.copyWith(
+                        fontSize: 24,
+                        color: ok ? XpertColors.onSurface : accent,
+                      ),
                       maxLines: 1,
                     ),
                     const SizedBox(height: 2),
@@ -95,14 +98,14 @@ class MetricTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
+          // The target stays on the tile either way: a number on its own says
+          // nothing, and "Needs work" without the line it crossed says less.
           Text(
-            ok
-                ? ref.t('target.metric.target', {
-                    'value':
-                        '${lowerIsBetter ? '≤ ' : '≥ '}'
-                        '${metric.threshold.toStringAsFixed(decimals)}',
-                  })
-                : ref.t('target.metric.attention'),
+            ref.t('target.metric.target', {
+              'value':
+                  '${lowerIsBetter ? '≤ ' : '≥ '}'
+                  '${metric.threshold.toStringAsFixed(decimals)}',
+            }),
             style: XpertTypography.caption.copyWith(
               fontSize: 11.5,
               color: ok ? XpertColors.muted : accent,

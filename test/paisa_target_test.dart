@@ -254,9 +254,19 @@ void main() {
       );
 
       expect(find.byType(RateLadder), findsOneWidget);
-      final gold = tester.getTopLeft(find.text('Gold')).dy;
-      final silver = tester.getTopLeft(find.text('Silver')).dy;
-      final bronze = tester.getTopLeft(find.text('Bronze')).dy;
+      // Scoped to the ladder: the band a partner is in is also named on the
+      // rate card above it.
+      double rungTop(String label) => tester
+          .getTopLeft(
+            find.descendant(
+              of: find.byType(RateLadder),
+              matching: find.text(label),
+            ),
+          )
+          .dy;
+      final gold = rungTop('Gold');
+      final silver = rungTop('Silver');
+      final bronze = rungTop('Bronze');
       expect(gold, lessThan(silver));
       expect(silver, lessThan(bronze));
     });
@@ -273,6 +283,64 @@ void main() {
       // 4.5 needed, 4.3 held.
       expect(find.textContaining('0.2'), findsWidgets);
       expect(find.textContaining('150'), findsWidgets);
+    });
+
+    testWidgets('an off-target metric keeps the line it crossed in view', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const TargetScreen(),
+        overrides: [performanceProvider.overrideWith((_) => _perf)],
+      );
+
+      // 4 cancellations against a limit of 2. The tile used to replace the
+      // limit with "Needs work", leaving the number with nothing to measure.
+      expect(find.text('Target: ≤ 2'), findsNWidgets(2));
+      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    });
+
+    testWidgets('the top band says so instead of dangling a next step', (
+      tester,
+    ) async {
+      const top = PartnerPerformance(
+        rating: 4.8,
+        ratingCount: 120,
+        currentRatePerHour: 150,
+        currentBandLabel: 'Gold',
+        ladder: [
+          RateLadderBand(
+            label: 'Silver',
+            minRating: 4.0,
+            maxRating: 4.4,
+            ratePerHour: 130,
+          ),
+          RateLadderBand(
+            label: 'Gold',
+            minRating: 4.5,
+            maxRating: 5,
+            ratePerHour: 150,
+            current: true,
+          ),
+        ],
+        ratingMetric: PerformanceMetric(value: 4.8, threshold: 4.0, ok: true),
+        unavailableMetric: PerformanceMetric(value: 0, threshold: 3, ok: true),
+        cancellationsMetric: PerformanceMetric(
+          value: 0,
+          threshold: 2,
+          ok: true,
+        ),
+        lateShowMetric: PerformanceMetric(value: 1, threshold: 2, ok: true),
+      );
+
+      await _pump(
+        tester,
+        const TargetScreen(),
+        overrides: [performanceProvider.overrideWith((_) => top)],
+      );
+
+      expect(find.text('Top band — you earn the highest rate'), findsOneWidget);
+      expect(find.textContaining('to go'), findsNothing);
     });
 
     testWidgets('a metric bar fills in the direction that means better', (

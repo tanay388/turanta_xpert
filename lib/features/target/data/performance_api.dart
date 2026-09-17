@@ -87,8 +87,8 @@ class PartnerPerformance {
     final band = json['currentRateBand'] as Map<String, dynamic>?;
     final metrics = json['metrics'] as Map<String, dynamic>? ?? const {};
     PerformanceMetric metric(String key) => PerformanceMetric.fromJson(
-          metrics[key] as Map<String, dynamic>? ?? const {},
-        );
+      metrics[key] as Map<String, dynamic>? ?? const {},
+    );
     return PartnerPerformance(
       rating: (ratingJson['value'] as num?)?.toDouble(),
       ratingCount: (ratingJson['count'] as num?)?.toInt() ?? 0,
@@ -110,8 +110,7 @@ class PerformanceApi {
   final Dio _dio;
 
   Future<PartnerPerformance> get() async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/partner/performance');
+    final res = await _dio.get<Map<String, dynamic>>('/partner/performance');
     return PartnerPerformance.fromJson(res.data ?? const {});
   }
 }
