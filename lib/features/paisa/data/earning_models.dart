@@ -145,10 +145,7 @@ class EarningLineItem {
 
 /// A cycle plus its per-job breakdown.
 class PayoutCycleDetail {
-  const PayoutCycleDetail({
-    required this.cycle,
-    this.items = const [],
-  });
+  const PayoutCycleDetail({required this.cycle, this.items = const []});
 
   final PayoutCycle cycle;
   final List<EarningLineItem> items;

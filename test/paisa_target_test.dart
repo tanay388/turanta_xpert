@@ -9,6 +9,7 @@ import 'package:turanta_xpert/core/i18n/localization_service.dart';
 import 'package:turanta_xpert/features/paisa/data/earning_api.dart';
 import 'package:turanta_xpert/features/paisa/data/earning_models.dart';
 import 'package:turanta_xpert/features/paisa/presentation/paisa_screen.dart';
+import 'package:turanta_xpert/features/paisa/presentation/payout_detail_screen.dart';
 import 'package:turanta_xpert/features/target/data/performance_api.dart';
 import 'package:turanta_xpert/features/target/presentation/target_screen.dart';
 import 'package:turanta_xpert/features/target/presentation/widgets/rate_ladder.dart';
@@ -75,7 +76,6 @@ const _perf = PartnerPerformance(
   lateShowMetric: PerformanceMetric(value: 0, threshold: 2, ok: true),
 );
 
-
 Future<void> _pump(
   WidgetTester tester,
   Widget screen, {
@@ -97,6 +97,11 @@ Future<void> _pump(
       GoRoute(
         path: '/paisa/cycles/:id',
         builder: (_, _) => const Scaffold(body: Text('detail')),
+      ),
+      GoRoute(
+        path: '/jobs/:id',
+        builder: (_, state) =>
+            Scaffold(body: Text('job ${state.pathParameters['id']}')),
       ),
     ],
   );
@@ -127,12 +132,14 @@ void main() {
         ],
       );
 
-      expect(find.text('\u20b94820'), findsOneWidget);
+      expect(find.text('\u20b94,820'), findsOneWidget);
       // Five days into a fourteen-day window.
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator).first,
       );
       expect(bar.value, closeTo(5 / 14, 0.02));
+      // The window's own answer to "when does this pay out?".
+      expect(find.text('9 days left'), findsOneWidget);
     });
 
     testWidgets('the previous total counts only what was actually paid', (
@@ -148,8 +155,8 @@ void main() {
       );
 
       // 9140 paid + 7630 still processing — only the first has landed.
-      expect(find.text('\u20b99140'), findsNWidgets(2));
-      expect(find.text('\u20b916770'), findsNothing);
+      expect(find.text('\u20b99,140 paid'), findsOneWidget);
+      expect(find.textContaining('\u20b916,770'), findsNothing);
     });
 
     testWidgets('the accruing cycle is not repeated in the list below', (
@@ -175,7 +182,64 @@ void main() {
         ],
       );
 
-      expect(find.text('\u20b94820'), findsOneWidget);
+      expect(find.text('\u20b94,820'), findsOneWidget);
+    });
+  });
+
+  group('payout detail', () {
+    final detail = PayoutCycleDetail(
+      cycle: _cycles.first,
+      items: [
+        EarningLineItem(
+          bookingId: 101,
+          serviceName: 'Deep house cleaning',
+          ratePerHour: 130,
+          hours: 2,
+          amount: 260,
+          earnedAt: DateTime(2026, 7, 30),
+        ),
+        EarningLineItem(
+          bookingId: 102,
+          serviceName: 'Laundry & ironing',
+          ratePerHour: 130,
+          hours: 1.5,
+          amount: 195,
+          earnedAt: DateTime(2026, 7, 29),
+        ),
+      ],
+    );
+
+    List<Override> overrides() => [
+      payoutCycleDetailProvider(6).overrideWith((_) => detail),
+    ];
+
+    testWidgets('the payout says what it is made of, and adds up', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const PayoutDetailScreen(cycleId: 6),
+        overrides: overrides(),
+      );
+
+      expect(find.text('2 jobs · 3.5 hr'), findsOneWidget);
+      // The rows and the total are the same money, so the total is printed
+      // where someone checking the arithmetic looks for it.
+      expect(find.text('Total'), findsOneWidget);
+      expect(find.text('\u20b99,140'), findsNWidgets(2));
+    });
+
+    testWidgets('a line opens the job that earned it', (tester) async {
+      await _pump(
+        tester,
+        const PayoutDetailScreen(cycleId: 6),
+        overrides: overrides(),
+      );
+
+      await tester.tap(find.text('Laundry & ironing'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('job 102'), findsOneWidget);
     });
   });
 
@@ -230,7 +294,10 @@ void main() {
           .toList();
 
       expect(bars[0].value, 1.0); // rating 4.3 against a 4.0 floor
-      expect(bars[1].value, closeTo(2 / 3, 0.01)); // 1 of 3 unavailable days used
+      expect(
+        bars[1].value,
+        closeTo(2 / 3, 0.01),
+      ); // 1 of 3 unavailable days used
       expect(bars[2].value, 0.0); // 4 cancellations against a limit of 2
       expect(bars[3].value, 1.0); // no late shows at all
     });

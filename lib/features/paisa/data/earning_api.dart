@@ -15,14 +15,14 @@ class EarningApi {
   final Dio _dio;
 
   Future<EarningSummary> summary() async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/partner/earning/summary');
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/partner/earning/summary',
+    );
     return EarningSummary.fromJson(res.data ?? const {});
   }
 
   Future<List<PayoutCycle>> cycles() async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/partner/earning/cycles');
+    final res = await _dio.get<Map<String, dynamic>>('/partner/earning/cycles');
     final items = res.data?['items'] as List<dynamic>? ?? const [];
     return items
         .map((e) => PayoutCycle.fromJson(e as Map<String, dynamic>))
@@ -30,8 +30,9 @@ class EarningApi {
   }
 
   Future<PayoutCycleDetail> cycleDetail(int id) async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/partner/earning/cycles/$id');
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/partner/earning/cycles/$id',
+    );
     return PayoutCycleDetail.fromJson(res.data ?? const {});
   }
 }
@@ -51,7 +52,8 @@ final payoutCyclesProvider = FutureProvider<List<PayoutCycle>>((ref) async {
 });
 
 /// Per-job breakdown for one cycle (used by the payout detail screen).
-final payoutCycleDetailProvider =
-    FutureProvider.family<PayoutCycleDetail, int>((ref, id) async {
-  return ref.watch(earningApiProvider).cycleDetail(id);
-});
+final payoutCycleDetailProvider = FutureProvider.family<PayoutCycleDetail, int>(
+  (ref, id) async {
+    return ref.watch(earningApiProvider).cycleDetail(id);
+  },
+);

@@ -7,8 +7,10 @@ import '../../../app/shell/xpert_screen_scaffold.dart';
 import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
+import '../../../core/utils/rupees.dart';
 import '../data/earning_api.dart';
 import '../data/earning_models.dart';
+import 'payout_status_chip.dart';
 import 'widgets/cycle_hero.dart';
 
 /// Paisa — earnings and payouts.
@@ -36,7 +38,8 @@ class PaisaScreen extends ConsumerWidget {
                 summary: data,
                 onTap: data.currentCycleId == null
                     ? null
-                    : () => context.push('/paisa/cycles/${data.currentCycleId}'),
+                    : () =>
+                          context.push('/paisa/cycles/${data.currentCycleId}'),
               ),
             ),
       child: RefreshIndicator(
@@ -94,9 +97,12 @@ class PaisaScreen extends ConsumerWidget {
                       trailing: paid <= 0
                           ? null
                           : Text(
-                              '₹${paid.toStringAsFixed(0)}',
-                              style: XpertTypography.metric.copyWith(
-                                fontSize: 13,
+                              ref.t('paisa.paid_total', {
+                                'amount': rupees(paid),
+                              }),
+                              style: XpertTypography.caption.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                     ),
@@ -116,9 +122,8 @@ class PaisaScreen extends ConsumerWidget {
   }
 }
 
-/// What an hour is worth right now, and the rating that sets it. The band and
-/// the rating used to be two label-over-value blocks with the labels nearly as
-/// loud as the numbers.
+/// What an hour is worth right now, the band that sets it, and the rating
+/// that moves the band — the three facts behind every number on this screen.
 class _RateStrip extends ConsumerWidget {
   const _RateStrip({required this.summary});
 
@@ -126,78 +131,172 @@ class _RateStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final band = summary.band?.label;
+    final band = summary.band?.label ?? '';
 
     return Container(
-      padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          Padding(
+            padding: const EdgeInsets.all(XpertSpacing.md),
+            child: Row(
               children: [
-                Text(
-                  summary.ratePerHour > 0
-                      ? '₹${summary.ratePerHour.toStringAsFixed(0)}'
-                      : '—',
-                  style: XpertTypography.metric.copyWith(fontSize: 22),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            summary.ratePerHour > 0
+                                ? rupees(summary.ratePerHour)
+                                : '—',
+                            style: XpertTypography.metric.copyWith(
+                              fontSize: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              ref.t('paisa.per_hour'),
+                              style: XpertTypography.caption.copyWith(
+                                fontSize: 12.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (band.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _BandChip(label: band),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  band == null || band.isEmpty
-                      ? ref.t('paisa.per_hour')
-                      : '${ref.t('paisa.per_hour')} · $band',
-                  style: XpertTypography.caption.copyWith(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (summary.rating != null) ...[
+                  Container(
+                    width: 1,
+                    height: 38,
+                    color: const Color(0xFFE8EDF1),
+                  ),
+                  const SizedBox(width: XpertSpacing.md),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 18,
+                            color: Color(0xFFF2A81D),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            summary.rating!.toStringAsFixed(1),
+                            style: XpertTypography.metric.copyWith(
+                              fontSize: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ref.t('home.stats.rating'),
+                        style: XpertTypography.caption.copyWith(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          if (summary.rating != null) ...[
-            Container(width: 1, height: 34, color: const Color(0xFFE8EDF1)),
-            const SizedBox(width: XpertSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 17,
-                      color: Color(0xFFF5A623),
+          // The rate is not a fixed fact, and the screen that explains it is a
+          // tab away — say so here, where the number is.
+          InkWell(
+            onTap: () => context.go('/target'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: XpertSpacing.md,
+                vertical: 11,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFE8EDF1))),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      ref.t('paisa.see_ladder'),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: XpertColors.heroAccent,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 3),
-                    Text(
-                      summary.rating!.toStringAsFixed(1),
-                      style: XpertTypography.metric.copyWith(fontSize: 22),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  ref.t('home.stats.rating'),
-                  style: XpertTypography.caption.copyWith(fontSize: 12),
-                ),
-              ],
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: XpertColors.heroAccent,
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 }
 
-/// One past payout. The status is a coloured rail rather than a chip, so it
-/// does not compete with the amount for the eye.
+class _BandChip extends StatelessWidget {
+  const _BandChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: XpertColors.heroCard,
+        borderRadius: BorderRadius.circular(XpertRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: XpertColors.heroAccent,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+/// One past payout: when it was for, where it got to, and what it paid.
 class _CycleRow extends ConsumerWidget {
   const _CycleRow({required this.cycle});
 
@@ -205,82 +304,78 @@ class _CycleRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (railColor, statusKey) = switch (cycle.status) {
-      PayoutStatus.paid => (XpertColors.success, 'paisa.status.paid'),
-      PayoutStatus.pending => (const Color(0xFFF5A623), 'paisa.status.pending'),
-      PayoutStatus.accruing => (XpertColors.primary, 'paisa.status.accruing'),
-    };
-
+    final (color, statusKey) = payoutStatusLook(cycle.status);
     final paidAt = cycle.paidAt;
     final subtitle = paidAt != null
         ? ref.t('paisa.paid_on', {'date': DateFormat('d MMM').format(paidAt)})
         : ref.t(statusKey);
 
-    return Material(
-      color: XpertColors.surface,
-      borderRadius: BorderRadius.circular(XpertRadius.lg),
-      child: InkWell(
-        onTap: () => context.push('/paisa/cycles/${cycle.id}'),
+    return Container(
+      decoration: BoxDecoration(
+        color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(XpertRadius.lg),
-            border: Border.all(
-              color: XpertColors.border.withValues(alpha: 0.45),
-            ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 14,
+            offset: Offset(0, 4),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: IntrinsicHeight(
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/paisa/cycles/${cycle.id}'),
+          child: Padding(
+            padding: const EdgeInsets.all(XpertSpacing.md),
             child: Row(
               children: [
-                Container(width: 4, color: railColor),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(XpertSpacing.md),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _period(cycle.periodStart, cycle.periodEnd),
-                                style: XpertTypography.label.copyWith(
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                subtitle,
-                                style: XpertTypography.caption.copyWith(
-                                  fontSize: 12,
-                                  color: railColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: XpertSpacing.sm),
-                        // Tabular, so a column of amounts lines up on the
-                        // decimal and can be compared at a glance.
-                        Text(
-                          '₹${cycle.totalAmount.toStringAsFixed(0)}',
-                          style: XpertTypography.metric.copyWith(fontSize: 17),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 20,
-                          color: XpertColors.border,
-                        ),
-                      ],
-                    ),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
                   ),
+                ),
+                const SizedBox(width: XpertSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _period(cycle.periodStart, cycle.periodEnd),
+                        style: XpertTypography.label.copyWith(fontSize: 14.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: XpertSpacing.sm),
+                // Tabular, so a column of amounts lines up and can be compared
+                // at a glance.
+                Text(
+                  rupees(cycle.totalAmount),
+                  style: XpertTypography.metric.copyWith(fontSize: 17),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: XpertColors.border,
                 ),
               ],
             ),
