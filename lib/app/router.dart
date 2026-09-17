@@ -53,6 +53,9 @@ class _Routes {
 
   static const Set<String> unauthenticated = {login, otp};
 
+  /// Screens a partner is held on until they clear the gate behind them.
+  static const Set<String> gateScreens = {language, legalConsent, kyc, pending};
+
   /// Reachable in either direction: the login screen's consent line opens it
   /// before there is a session, and Settings opens it after. It is kept out of
   /// [unauthenticated] deliberately — that set is also what forwards a
@@ -61,12 +64,50 @@ class _Routes {
   static bool isSessionAgnostic(String loc) => loc == legalDocument;
 }
 
-String? _postAuthDestination(Session session) {
-  if (session.needsLanguage) return _Routes.language;
-  if (session.needsLegalAcceptance) return _Routes.legalConsent;
-  if (session.needsKyc) return _Routes.kyc;
-  if (session.isPendingApproval || !session.canUseHome) return _Routes.pending;
+/// What a signed-in partner still has to do before the app is theirs.
+class PartnerGates {
+  const PartnerGates({
+    required this.needsLanguage,
+    required this.needsLegalAcceptance,
+    required this.needsKyc,
+    required this.isPendingApproval,
+    required this.canUseHome,
+  });
+
+  PartnerGates.of(Session session)
+    : needsLanguage = session.needsLanguage,
+      needsLegalAcceptance = session.needsLegalAcceptance,
+      needsKyc = session.needsKyc,
+      isPendingApproval = session.isPendingApproval,
+      canUseHome = session.canUseHome;
+
+  final bool needsLanguage;
+  final bool needsLegalAcceptance;
+  final bool needsKyc;
+  final bool isPendingApproval;
+  final bool canUseHome;
+}
+
+/// The one screen a partner belongs on: the first gate they have not cleared,
+/// else home.
+String partnerDestination(PartnerGates gates) {
+  if (gates.needsLanguage) return _Routes.language;
+  if (gates.needsLegalAcceptance) return _Routes.legalConsent;
+  if (gates.needsKyc) return _Routes.kyc;
+  if (gates.isPendingApproval || !gates.canUseHome) return _Routes.pending;
   return _Routes.home;
+}
+
+/// Where to send a partner who is at [loc], or null to leave them there.
+///
+/// One ordered decision, not a rule per gate: as two sets of rules, a partner
+/// who could use home but owed a consent was sent from home to the consent
+/// screen by one and straight back by the other, until the router gave up.
+String? partnerRedirect(PartnerGates gates, String loc) {
+  final dest = partnerDestination(gates);
+  if (dest != _Routes.home) return loc == dest ? null : dest;
+  // Home it is — and the gates behind them are no longer theirs to sit on.
+  return _Routes.gateScreens.contains(loc) ? _Routes.home : null;
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -186,10 +227,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return PdfViewerScreen(title: extra.$1, url: extra.$2);
         },
       ),
-      GoRoute(
-        path: _Routes.hub,
-        builder: (_, _) => const HubScreen(),
-      ),
+      GoRoute(path: _Routes.hub, builder: (_, _) => const HubScreen()),
       GoRoute(
         path: _Routes.referral,
         builder: (_, _) => const ReferralScreen(),
@@ -224,48 +262,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!signedIn) return null;
 
-      final dest = _postAuthDestination(session);
-
+      final gates = PartnerGates.of(session);
       if (_Routes.unauthenticated.contains(loc)) {
-        return dest;
+        return partnerDestination(gates);
       }
-
-      if (session.needsLanguage && loc != _Routes.language) {
-        return _Routes.language;
-      }
-
-      // Nothing may be uploaded before every legal document has been opened.
-      if (!session.needsLanguage &&
-          session.needsLegalAcceptance &&
-          loc != _Routes.legalConsent) {
-        return _Routes.legalConsent;
-      }
-
-      if (!session.needsLanguage &&
-          !session.needsLegalAcceptance &&
-          session.needsKyc &&
-          loc != _Routes.kyc) {
-        return _Routes.kyc;
-      }
-
-      if (!session.needsLanguage &&
-          !session.needsLegalAcceptance &&
-          !session.needsKyc &&
-          !session.canUseHome &&
-          loc != _Routes.pending) {
-        return _Routes.pending;
-      }
-
-      if (session.canUseHome &&
-          !session.needsLanguage &&
-          (loc == _Routes.language ||
-              loc == _Routes.legalConsent ||
-              loc == _Routes.kyc ||
-              loc == _Routes.pending)) {
-        return _Routes.home;
-      }
-
-      return null;
+      return partnerRedirect(gates, loc);
     },
   );
 });
