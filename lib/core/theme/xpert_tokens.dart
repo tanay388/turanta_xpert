@@ -41,6 +41,10 @@ class XpertColors {
   static const border = Color(0xFFB0BEC5);
   static const muted = Color(0xFF455A64);
   static const danger = Color(0xFFD32F2F);
+
+  /// Amber dark enough to carry text on a light ground: a late job, a request
+  /// still waiting, leave taken without pay.
+  static const warning = Color(0xFFB45309);
   static const success = Color(0xFF2E7D32);
   static const online = Color(0xFF1B8A4A);
   static const offline = Color(0xFF78909C);

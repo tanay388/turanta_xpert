@@ -128,6 +128,26 @@ const _summary = LeaveSummary(
       endDate: '2026-08-12',
       daysCount: 3,
       status: 'PENDING',
+      reason: 'Cousin’s wedding',
+    ),
+    LeaveRequestItem(
+      id: 2,
+      startDate: '2026-08-20',
+      endDate: '2026-08-20',
+      daysCount: 1,
+      status: 'APPROVED',
+      reason: 'Fever',
+      reviewedByName: 'Sunita',
+    ),
+    LeaveRequestItem(
+      id: 3,
+      startDate: '2026-07-28',
+      endDate: '2026-07-29',
+      daysCount: 2,
+      status: 'REJECTED',
+      leaveType: 'UNPAID',
+      reason: 'Village trip',
+      reviewNote: 'Too many partners off that week.',
     ),
   ],
 );
@@ -209,8 +229,51 @@ void main() {
         of: find.byType(LeaveBalance),
         matching: find.byType(ClipRRect),
       );
-      expect(tester.getSize(bar.first).height, 8);
+      expect(tester.getSize(bar.first).height, 10);
       expect(tester.getSize(bar.first).width, greaterThan(100));
+    });
+
+    testWidgets('requests are grouped by what can still be done about them', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const LeaveScreen(),
+        overrides: _leaveWith(_summary),
+      );
+
+      // One flat list put a request nobody had answered among last month's.
+      expect(find.text('WAITING FOR APPROVAL'), findsOneWidget);
+      expect(find.text('COMING UP'), findsOneWidget);
+      expect(find.text('PAST REQUESTS'), findsOneWidget);
+    });
+
+    testWidgets('a refused request says why, in the supervisor\'s words', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const LeaveScreen(),
+        overrides: _leaveWith(_summary),
+      );
+
+      // The reason and the review note were both on the payload and shown
+      // nowhere, so "Rejected" was the whole answer.
+      expect(find.text('Too many partners off that week.'), findsOneWidget);
+      expect(find.text('Village trip'), findsOneWidget);
+      expect(find.text('Rejected · Unpaid leave'), findsOneWidget);
+    });
+
+    testWidgets('only a request still waiting can be cancelled', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const LeaveScreen(),
+        overrides: _leaveWith(_summary),
+      );
+
+      expect(find.text('Cancel request'), findsOneWidget);
     });
 
     testWidgets('reasons are tappable, not hidden in a dropdown', (
@@ -244,7 +307,7 @@ void main() {
 
       // It used to be a From tile and a To tile, each opening its own modal.
       expect(find.text('DATES'), findsOneWidget);
-      expect(find.textContaining('1 day(s) selected'), findsOneWidget);
+      expect(find.textContaining('1 day selected'), findsOneWidget);
     });
   });
 

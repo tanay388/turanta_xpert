@@ -14,9 +14,6 @@ import '../live_job_timer.dart';
 /// Room the white sheet takes when it is pulled up over the hero.
 const jobSheetOverlap = XpertRadius.sheetTop;
 
-/// Amber dark enough to carry text on the wash.
-const _late = Color(0xFFB45309);
-
 /// The top of a job: where it stands, in one sentence.
 ///
 /// The screen used to open on the service name with a status pill under it,
@@ -192,9 +189,9 @@ _Headline _headline(WidgetRef ref, PartnerJob job, DateTime now) {
   if (until.inMinutes < 0) {
     return _Headline(
       icon: Icons.schedule_rounded,
-      accent: _late,
+      accent: XpertColors.warning,
       title: ref.t('jobs.detail.headline.late'),
-      titleColor: _late,
+      titleColor: XpertColors.warning,
       subtitle: ref.t('jobs.detail.headline.late_sub', {
         'when': _isSameDay(start, now)
             ? DateFormat('h:mm a').format(start)

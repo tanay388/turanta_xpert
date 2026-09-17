@@ -68,6 +68,11 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
 
   String _reasonLabel(String code) => ref.t('leave.reason_$code');
 
+  /// `1 day` / `3 days`. The count and its noun travel together so each
+  /// language can put them where its grammar wants them.
+  String _dayLabel(int count) =>
+      '$count ${ref.t(count == 1 ? 'leave.day' : 'leave.balance.days')}';
+
   Future<void> _pickRange() async {
     final picked = await showDateRangePicker(
       context: context,
@@ -85,10 +90,12 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
   }
 
   String _limitMessage() => widget.summary.canApplyUnpaid
-      ? ref.t('leave.unpaid_too_long', {'days': '${widget.summary.maxUnpaidDays}'})
+      ? ref.t('leave.unpaid_too_long', {
+          'days': _dayLabel(widget.summary.maxUnpaidDays),
+        })
       : ref.t('leave.not_enough_detail', {
-          'available': '${widget.summary.availableDays}',
-          'selected': '$_days',
+          'available': _dayLabel(widget.summary.availableDays),
+          'selected': _dayLabel(_days),
         });
 
   @override
@@ -128,10 +135,10 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
             Text(
               widget.summary.canApplyUnpaid
                   ? ref.t('leave.apply_subtitle_unpaid', {
-                      'days': '${widget.summary.maxUnpaidDays}',
+                      'days': _dayLabel(widget.summary.maxUnpaidDays),
                     })
                   : ref.t('leave.apply_subtitle', {
-                      'days': '${widget.summary.availableDays}',
+                      'days': _dayLabel(widget.summary.availableDays),
                     }),
               style: XpertTypography.caption.copyWith(fontSize: 13),
             ),
@@ -141,7 +148,7 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
             _RangeTile(
               start: _start,
               end: _end,
-              days: _days,
+              daysLabel: _dayLabel(_days),
               hasError: _daysOverLimit,
               onTap: _pickRange,
             ),
@@ -194,6 +201,13 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
               height: 56,
               child: FilledButton(
                 onPressed: canSubmit ? _submit : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: XpertColors.heroAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(XpertRadius.pill),
+                  ),
+                ),
                 child: leaveState.isSubmitting
                     ? const SizedBox(
                         width: 22,
@@ -203,7 +217,7 @@ class _ApplyLeaveSheetState extends ConsumerState<ApplyLeaveSheet> {
                     : Text(
                         // The button states what it will do, including how much
                         // of the balance it spends.
-                        ref.t('leave.submit_days', {'days': '$_days'}),
+                        ref.t('leave.submit_days', {'days': _dayLabel(_days)}),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -260,14 +274,14 @@ class _RangeTile extends ConsumerWidget {
   const _RangeTile({
     required this.start,
     required this.end,
-    required this.days,
+    required this.daysLabel,
     required this.hasError,
     required this.onTap,
   });
 
   final DateTime start;
   final DateTime end;
-  final int days;
+  final String daysLabel;
   final bool hasError;
   final VoidCallback onTap;
 
@@ -296,7 +310,7 @@ class _RangeTile extends ConsumerWidget {
               const Icon(
                 Icons.calendar_month_rounded,
                 size: 22,
-                color: XpertColors.primary,
+                color: XpertColors.heroAccent,
               ),
               const SizedBox(width: XpertSpacing.md),
               Expanded(
@@ -314,10 +328,12 @@ class _RangeTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      ref.t('leave.days_selected', {'days': '$days'}),
+                      ref.t('leave.days_selected', {'days': daysLabel}),
                       style: XpertTypography.caption.copyWith(
                         fontSize: 12.5,
-                        color: hasError ? XpertColors.danger : XpertColors.muted,
+                        color: hasError
+                            ? XpertColors.danger
+                            : XpertColors.muted,
                         fontWeight: hasError ? FontWeight.w700 : null,
                       ),
                     ),
@@ -357,7 +373,7 @@ class _ReasonChip extends StatelessWidget {
       selected: selected,
       child: Material(
         color: selected
-            ? XpertColors.primary.withValues(alpha: 0.12)
+            ? XpertColors.heroAccent.withValues(alpha: 0.10)
             : const Color(0xFFF6F9FB),
         borderRadius: BorderRadius.circular(XpertRadius.pill),
         child: InkWell(
@@ -371,7 +387,9 @@ class _ReasonChip extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(XpertRadius.pill),
               border: Border.all(
-                color: selected ? XpertColors.primary : const Color(0xFFDCE4EA),
+                color: selected
+                    ? XpertColors.heroAccent
+                    : const Color(0xFFDCE4EA),
                 width: selected ? 1.8 : 1.2,
               ),
             ),
@@ -381,7 +399,7 @@ class _ReasonChip extends StatelessWidget {
                 Icon(
                   icon,
                   size: 16,
-                  color: selected ? XpertColors.primary : XpertColors.muted,
+                  color: selected ? XpertColors.heroAccent : XpertColors.muted,
                 ),
                 const SizedBox(width: 6),
                 Text(

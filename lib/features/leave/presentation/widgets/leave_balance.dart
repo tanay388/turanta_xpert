@@ -4,13 +4,18 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../core/i18n/context_t.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 
+/// The colours of a leave balance, used by the meter and its legend so a
+/// segment and the words under it are never a different colour for the same
+/// thing.
+const leaveLeftColor = XpertColors.heroAccent;
+const leaveWaitingColor = XpertColors.warning;
+const leaveUsedColor = Color(0xFF94A3B8);
+const _meterTrack = Color(0xFFE3EBF1);
+
 /// Leave balance, as a quantity you can see rather than four caption lines.
 ///
-/// It used to be a 56pt number followed by "Paid leave you can use", "This
-/// month: 10 · Waiting: 2", "Lapsed (unused): 1" and sometimes an orange
-/// sentence about unpaid leave — five statements about one number, stacked, in
-/// the same size. The bar carries the same facts in the shape they actually
-/// have: a month's worth of days, some spent, some held, some left.
+/// The bar carries the facts in the shape they have: a cycle's worth of days,
+/// some spent, some held for a request nobody has answered, some left.
 class LeaveBalance extends ConsumerWidget {
   const LeaveBalance({
     super.key,
@@ -30,20 +35,55 @@ class LeaveBalance extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final used = (total - available - pending).clamp(0, total);
+    final spent = available == 0;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
-        color: XpertColors.heroCard,
+        color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0B1720),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(ref.t('leave.balance.eyebrow'), style: XpertTypography.eyebrow),
-          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(
+                child: Text(
+                  ref.t('leave.balance.eyebrow'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: XpertTypography.eyebrow.copyWith(
+                    color: XpertColors.muted,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              if (total > 0) ...[
+                const SizedBox(width: XpertSpacing.sm),
+                Expanded(
+                  child: Text(
+                    ref.t('leave.balance.of_cycle', {'count': '$total'}),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: XpertTypography.caption.copyWith(fontSize: 12),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -52,12 +92,13 @@ class LeaveBalance extends ConsumerWidget {
                 '$available',
                 style: XpertTypography.metric.copyWith(
                   fontSize: 38,
-                  color: XpertColors.onSurface,
+                  // A zero balance is not an achievement to set in ink.
+                  color: spent ? XpertColors.muted : leaveLeftColor,
                 ),
               ),
               const SizedBox(width: 6),
               Text(
-                ref.t('leave.balance.days'),
+                ref.t(available == 1 ? 'leave.day' : 'leave.balance.days'),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -74,35 +115,36 @@ class LeaveBalance extends ConsumerWidget {
               spacing: XpertSpacing.md,
               runSpacing: 4,
               children: [
-                if (used > 0)
+                if (available > 0)
                   _Legend(
-                    color: XpertColors.muted,
-                    label: ref.t('leave.balance.used', {'count': '$used'}),
+                    color: leaveLeftColor,
+                    label: ref.t('leave.balance.left', {'count': '$available'}),
                   ),
                 if (pending > 0)
                   _Legend(
-                    color: const Color(0xFFF9A825),
-                    label: ref.t('leave.balance.waiting', {'count': '$pending'}),
+                    color: leaveWaitingColor,
+                    label: ref.t('leave.balance.waiting', {
+                      'count': '$pending',
+                    }),
                   ),
-                if (lapsed > 0)
+                if (used > 0)
                   _Legend(
-                    color: XpertColors.muted,
-                    label: ref.t('leave.balance.lapsed', {'count': '$lapsed'}),
+                    color: leaveUsedColor,
+                    label: ref.t('leave.balance.used', {'count': '$used'}),
                   ),
               ],
             ),
           ],
+          if (lapsed > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              ref.t('leave.balance.lapsed', {'count': '$lapsed'}),
+              style: XpertTypography.caption.copyWith(fontSize: 12),
+            ),
+          ],
           if (canApplyUnpaid) ...[
             const SizedBox(height: XpertSpacing.sm),
-            Text(
-              ref.t('leave.unpaid_available_hint'),
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.35,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFFFB74D),
-              ),
-            ),
+            _UnpaidNotice(text: ref.t('leave.unpaid_available_hint')),
           ],
         ],
       ),
@@ -110,6 +152,8 @@ class LeaveBalance extends ConsumerWidget {
   }
 }
 
+/// The cycle as one bar: left, waiting, used — in that order, because that is
+/// the order a partner cares about them in.
 class _Meter extends StatelessWidget {
   const _Meter({
     required this.available,
@@ -130,27 +174,29 @@ class _Meter extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(XpertRadius.pill),
       child: SizedBox(
-        height: 8,
+        height: 10,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (available > 0)
               Expanded(
                 flex: available,
-                child: const ColoredBox(color: XpertColors.heroAccent),
+                child: const ColoredBox(color: leaveLeftColor),
               ),
             if (pending > 0)
               Expanded(
                 flex: pending,
-                child: const ColoredBox(color: Color(0xFFF9A825)),
+                child: const ColoredBox(color: leaveWaitingColor),
               ),
             if (used > 0)
               Expanded(
                 flex: used,
-                child: ColoredBox(
-                  color: Colors.white.withValues(alpha: 0.16),
-                ),
+                child: const ColoredBox(color: leaveUsedColor),
               ),
+            // Something has to be drawn, or the bar disappears on the day a
+            // partner has spent everything and has nothing pending.
+            if (available + pending + used == 0)
+              const Expanded(child: ColoredBox(color: _meterTrack)),
           ],
         ),
       ),
@@ -170,19 +216,65 @@ class _Legend extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 6),
         Text(
           label,
           style: const TextStyle(
             fontSize: 12,
+            fontWeight: FontWeight.w600,
             color: XpertColors.muted,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _UnpaidNotice extends StatelessWidget {
+  const _UnpaidNotice({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.sm,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: XpertColors.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(XpertRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: XpertColors.warning,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                color: XpertColors.warning,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

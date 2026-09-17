@@ -80,7 +80,7 @@ class EmptyState extends StatelessWidget {
                     borderRadius: BorderRadius.circular(XpertRadius.xl),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(icon, size: 30, color: XpertColors.primary),
+                  child: Icon(icon, size: 30, color: XpertColors.heroAccent),
                 )
               : Image.asset(
                   image!,
