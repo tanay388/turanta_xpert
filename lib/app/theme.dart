@@ -57,6 +57,40 @@ abstract final class XpertTheme {
           ),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 68,
+        backgroundColor: XpertColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: XpertColors.heroCard,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(XpertRadius.pill),
+        ),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        // The tab you are on is the one fact this bar has to carry, and the
+        // default gives it a pale pill behind an icon the same colour as the
+        // other four.
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: 23,
+            color: states.contains(WidgetState.selected)
+                ? XpertColors.heroAccent
+                : XpertColors.muted,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11,
+            height: 1.1,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w800
+                : FontWeight.w600,
+            color: states.contains(WidgetState.selected)
+                ? XpertColors.heroAccent
+                : XpertColors.muted,
+          ),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: XpertColors.surface,

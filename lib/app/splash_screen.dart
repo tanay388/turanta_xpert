@@ -20,7 +20,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   // The backend bootstrap call failed, so there is no [Session]/profile to
   // read a phone from — this falls back to the raw Firebase identity so a
   // partner stuck on a role conflict can see which number is signed in.
-  String? get _signedInPhone => fb.FirebaseAuth.instance.currentUser?.phoneNumber;
+  String? get _signedInPhone =>
+      fb.FirebaseAuth.instance.currentUser?.phoneNumber;
 
   @override
   void initState() {
@@ -105,8 +106,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     const SizedBox(height: XpertSpacing.xs),
                     Text(
                       ref.t('splash.tagline'),
-                      style: XpertTypography.caption
-                          .copyWith(color: XpertColors.muted),
+                      style: XpertTypography.caption.copyWith(
+                        color: XpertColors.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -125,8 +127,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   Text(
                     ref.t('splash.signed_in_as', {'phone': _signedInPhone!}),
                     textAlign: TextAlign.center,
-                    style: XpertTypography.caption
-                        .copyWith(color: XpertColors.muted),
+                    style: XpertTypography.caption.copyWith(
+                      color: XpertColors.muted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: XpertSpacing.md),

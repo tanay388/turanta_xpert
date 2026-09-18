@@ -70,47 +70,47 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        Center(
-          child: image == null
-              ? Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: XpertColors.secondary,
-                    borderRadius: BorderRadius.circular(XpertRadius.xl),
+          Center(
+            child: image == null
+                ? Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: XpertColors.secondary,
+                      borderRadius: BorderRadius.circular(XpertRadius.xl),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(icon, size: 30, color: XpertColors.heroAccent),
+                  )
+                : Image.asset(
+                    image!,
+                    height: imageHeight,
+                    fit: BoxFit.contain,
+                    // Decoded at the size it is drawn, not the 900px source.
+                    cacheHeight: (imageHeight * 3).round(),
+                    errorBuilder: (_, _, _) =>
+                        Icon(icon, size: 44, color: XpertColors.heroAccent),
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 30, color: XpertColors.heroAccent),
-                )
-              : Image.asset(
-                  image!,
-                  height: imageHeight,
-                  fit: BoxFit.contain,
-                  // Decoded at the size it is drawn, not the 900px source.
-                  cacheHeight: (imageHeight * 3).round(),
-                  errorBuilder: (_, _, _) => Icon(
-                    icon,
-                    size: 44,
-                    color: XpertColors.primary,
-                  ),
-                ),
-        ),
-        const SizedBox(height: XpertSpacing.lg),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: XpertTypography.title.copyWith(fontSize: 18),
-        ),
-        const SizedBox(height: XpertSpacing.xs),
-        Text(
-          body,
-          textAlign: TextAlign.center,
-          style: XpertTypography.caption.copyWith(fontSize: 13.5, height: 1.45),
-        ),
-        if (action != null) ...[
+          ),
           const SizedBox(height: XpertSpacing.lg),
-          Center(child: action!),
-        ],
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: XpertTypography.title.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: XpertSpacing.xs),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: XpertTypography.caption.copyWith(
+              fontSize: 13.5,
+              height: 1.45,
+            ),
+          ),
+          if (action != null) ...[
+            const SizedBox(height: XpertSpacing.lg),
+            Center(child: action!),
+          ],
         ],
       ),
     );
