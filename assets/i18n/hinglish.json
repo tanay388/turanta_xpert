@@ -126,6 +126,7 @@
   "otp.error.too_many": "Bahut zyada attempts. Kuch minute baad try karein.",
   "otp.error.invalid_code": "Yeh code kaam nahi aaya. Check karke phir try karein.",
   "otp.error.generic": "Code bhej nahi paye. Phir try karein.",
+  "otp.error.no_response": "Google ka verification jawab nahi de raha. Internet check karke dobara try karo.",
   "language.title": "Apni language choose karo",
   "language.subtitle": "Baad mein settings se change kar sakte ho.",
   "language.cta": "Continue",

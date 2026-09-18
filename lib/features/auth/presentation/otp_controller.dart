@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -65,12 +67,29 @@ class OtpSucceeded extends OtpState {
   const OtpSucceeded();
 }
 
+/// How long a partner waits for Google to answer before the screen admits
+/// nothing is happening. `verifyPhoneNumber`'s own `timeout` only governs
+/// auto-retrieval of the SMS; when device verification itself never comes
+/// back, not one of its callbacks fires and the screen spins forever.
+const otpSendTimeout = Duration(seconds: 45);
+
 class OtpController extends Notifier<OtpState> {
+  Timer? _sendGuard;
+
   @override
-  OtpState build() => const OtpIdle();
+  OtpState build() {
+    ref.onDispose(() => _sendGuard?.cancel());
+    return const OtpIdle();
+  }
+
+  void _answered() => _sendGuard?.cancel();
 
   Future<void> sendOtp(String phone) async {
     state = const OtpSending();
+    _sendGuard?.cancel();
+    _sendGuard = Timer(otpSendTimeout, () {
+      if (state is OtpSending) state = const OtpFailed('otp.error.no_response');
+    });
 
     if (Firebase.apps.isEmpty) {
       state = const OtpFailed('otp.error.generic');
@@ -83,6 +102,7 @@ class OtpController extends Notifier<OtpState> {
         phoneNumber: phone,
         timeout: const Duration(seconds: 60),
         verificationCompleted: (credential) async {
+          _answered();
           try {
             await auth.signInWithCredential(credential);
             state = const OtpSucceeded();
@@ -91,20 +111,25 @@ class OtpController extends Notifier<OtpState> {
           }
         },
         verificationFailed: (FirebaseAuthException e) {
+          _answered();
           state = OtpFailed(_sendFailureKey(e));
         },
         codeSent: (verificationId, _) {
+          _answered();
           state = OtpCodeSent(verificationId: verificationId, phone: phone);
         },
         codeAutoRetrievalTimeout: (verificationId) {
+          _answered();
           final prior = state;
           final phoneStr = prior is OtpCodeSent ? prior.phone : phone;
           state = OtpCodeSent(verificationId: verificationId, phone: phoneStr);
         },
       );
     } on FirebaseAuthException catch (e) {
+      _answered();
       state = OtpFailed(_sendFailureKey(e));
     } catch (_) {
+      _answered();
       state = const OtpFailed('otp.error.generic');
     }
   }
@@ -113,13 +138,13 @@ class OtpController extends Notifier<OtpState> {
     final current = state;
     final session = switch (current) {
       OtpCodeSent(:final verificationId, :final phone) => (
-          verificationId: verificationId,
-          phone: phone,
-        ),
+        verificationId: verificationId,
+        phone: phone,
+      ),
       OtpVerifyFailed(:final verificationId, :final phone) => (
-          verificationId: verificationId,
-          phone: phone,
-        ),
+        verificationId: verificationId,
+        phone: phone,
+      ),
       _ => null,
     };
     if (session == null) return;
@@ -156,4 +181,6 @@ class OtpController extends Notifier<OtpState> {
   void reset() => state = const OtpIdle();
 }
 
-final otpProvider = NotifierProvider<OtpController, OtpState>(OtpController.new);
+final otpProvider = NotifierProvider<OtpController, OtpState>(
+  OtpController.new,
+);
