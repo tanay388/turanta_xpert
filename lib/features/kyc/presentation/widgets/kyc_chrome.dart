@@ -38,10 +38,7 @@ class KycStepper extends ConsumerWidget {
             ),
             const SizedBox(width: XpertSpacing.sm),
             Text(
-              ref.t('kyc.step_of', {
-                'step': '${step + 1}',
-                'total': '$total',
-              }),
+              ref.t('kyc.step_of', {'step': '${step + 1}', 'total': '$total'}),
               style: XpertTypography.caption.copyWith(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,

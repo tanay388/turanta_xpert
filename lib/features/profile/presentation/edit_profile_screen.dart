@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/i18n/context_t.dart';
+import '../../../core/models/gender.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
@@ -20,18 +21,16 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _nameCtrl = TextEditingController();
   String? _gender;
+
+  /// The three onboarding offers, plus whatever this account already holds.
+  List<String> get _options => [
+    ...kGenderOptions,
+    if (_gender != null && !kGenderOptions.contains(_gender)) _gender!,
+  ];
   String? _photoPath;
   String? _existingPhoto;
   bool _saving = false;
   String? _error;
-
-  static const _genders = ['Male', 'Female', 'Prefer not to say'];
-
-  static const _genderKeys = {
-    'Male': 'profile.gender.male',
-    'Female': 'profile.gender.female',
-    'Prefer not to say': 'profile.gender.prefer_not_to_say',
-  };
 
   @override
   void initState() {
@@ -80,16 +79,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     });
 
     try {
-      await ref.read(partnerAuthApiProvider).updateProfile(
-            name: name,
-            gender: _gender,
-            photoPath: _photoPath,
-          );
+      await ref
+          .read(partnerAuthApiProvider)
+          .updateProfile(name: name, gender: _gender, photoPath: _photoPath);
       await ref.read(authProvider.notifier).refreshProfile();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ref.t('profile.saved'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ref.t('profile.saved'))));
       Navigator.pop(context);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -166,7 +163,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           Text(ref.t('profile.gender'), style: XpertTypography.caption),
           const SizedBox(height: XpertSpacing.xs),
           DropdownButtonFormField<String>(
-            value: _genders.contains(_gender) ? _gender : null,
+            // An older account can hold a value onboarding no longer offers;
+            // it stays in the list so editing the name does not silently
+            // change the gender on file.
+            value: _options.contains(_gender) ? _gender : null,
             isExpanded: true,
             decoration: InputDecoration(
               hintText: ref.t('profile.gender_hint'),
@@ -174,12 +174,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 borderRadius: BorderRadius.circular(XpertRadius.md),
               ),
             ),
-            items: _genders
+            items: _options
                 .map(
                   (g) => DropdownMenuItem(
                     value: g,
                     child: Text(
-                      ref.t(_genderKeys[g] ?? g),
+                      ref.t(genderLabelKey(g)),
                       style: XpertTypography.body,
                     ),
                   ),
@@ -191,8 +191,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             const SizedBox(height: XpertSpacing.md),
             Text(
               _error!,
-              style:
-                  XpertTypography.caption.copyWith(color: XpertColors.danger),
+              style: XpertTypography.caption.copyWith(
+                color: XpertColors.danger,
+              ),
             ),
           ],
           const SizedBox(height: XpertSpacing.xl),

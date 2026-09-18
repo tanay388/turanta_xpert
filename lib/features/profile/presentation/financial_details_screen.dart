@@ -237,10 +237,7 @@ class _KycStatus extends ConsumerWidget {
           Expanded(
             child: Text(
               ref.t(key),
-              style: XpertTypography.label.copyWith(
-                fontSize: 14,
-                color: color,
-              ),
+              style: XpertTypography.label.copyWith(fontSize: 14, color: color),
             ),
           ),
         ],
@@ -259,7 +256,11 @@ class _Note extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.lock_outline_rounded, size: 15, color: XpertColors.muted),
+        const Icon(
+          Icons.lock_outline_rounded,
+          size: 15,
+          color: XpertColors.muted,
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(

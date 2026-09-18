@@ -184,7 +184,10 @@ class _Identity extends ConsumerWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: XpertColors.primary,
-                      border: Border.all(color: XpertColors.background, width: 3),
+                      border: Border.all(
+                        color: XpertColors.background,
+                        width: 3,
+                      ),
                     ),
                     alignment: Alignment.center,
                     child: const Icon(

@@ -92,7 +92,10 @@ Future<void> _pump(
 /// The TextField under a given AuthTextField label (labels are uppercased).
 Finder _field(String label) => find.descendant(
   of: find
-      .ancestor(of: find.text(label.toUpperCase()), matching: find.byType(Column))
+      .ancestor(
+        of: find.text(label.toUpperCase()),
+        matching: find.byType(Column),
+      )
       .first,
   matching: find.byType(TextField),
 );
@@ -116,6 +119,8 @@ Future<void> _fillToReview(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('OK'));
   await tester.pumpAndSettle();
+  await tester.tap(find.text('Female'));
+  await tester.pumpAndSettle();
   await _continue(tester);
 
   await _upload(tester, 'Aadhaar front');
@@ -124,7 +129,6 @@ Future<void> _fillToReview(WidgetTester tester) async {
   await _continue(tester);
 
   await _upload(tester, 'PAN front');
-  await _upload(tester, 'PAN back');
   await tester.enterText(_field('PAN number'), 'ABCDE1234F');
   await _continue(tester);
 
@@ -207,11 +211,44 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Male'));
+      await tester.pumpAndSettle();
       await _continue(tester);
 
       expect(find.text('Uploaded — tap to retake'), findsNothing);
       await _upload(tester, 'Aadhaar front');
       expect(find.text('Uploaded — tap to retake'), findsOneWidget);
+    });
+
+    testWidgets('asks for gender, and will not go on without it', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tester.enterText(_field('Full name'), 'Tanay Deo');
+      await tester.tap(find.text('Select date of birth'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await _continue(tester);
+
+      // Still on the personal step, with the reason why.
+      expect(find.text('Select your gender'), findsOneWidget);
+      expect(find.text('Other'), findsOneWidget);
+
+      await tester.tap(find.text('Other'));
+      await tester.pumpAndSettle();
+      await _continue(tester);
+      expect(find.text('Aadhaar front'), findsOneWidget);
+    });
+
+    testWidgets('sends the gender it was given', (tester) async {
+      await _pump(tester);
+      await _fillToReview(tester);
+      await _continue(tester);
+      await tester.tap(find.text('Submit KYC'));
+      await tester.pumpAndSettle();
+
+      expect(api.sent!['gender'], 'Female');
     });
 
     testWidgets('rejects a PAN of the right length but the wrong shape', (
@@ -240,7 +277,10 @@ void main() {
     ) async {
       await _pump(tester);
       await _fillToReview(tester);
-      await tester.enterText(_field('GST number (optional)'), '27AAPFU0939F1ZV');
+      await tester.enterText(
+        _field('GST number (optional)'),
+        '27AAPFU0939F1ZV',
+      );
       await _continue(tester);
       await tester.tap(find.text('Submit KYC'));
       await tester.pumpAndSettle();
@@ -271,7 +311,6 @@ void main() {
         'aadhaarFrontUrl',
         'aadhaarBackUrl',
         'panFrontUrl',
-        'panBackUrl',
         'selfieUrl',
       ]) {
         expect(sent[key], isNotNull, reason: '$key should be uploaded');
