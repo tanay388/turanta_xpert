@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../app/router.dart';
 import '../../../core/i18n/app_locale.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/i18n/locale_provider.dart';
@@ -76,13 +77,7 @@ class _LanguageSelectionScreenState
         context.go('/login');
         return;
       }
-      if (session.needsKyc) {
-        context.go('/kyc');
-      } else if (session.isPendingApproval || !session.canUseHome) {
-        context.go('/pending-approval');
-      } else {
-        context.go('/home');
-      }
+      context.go(partnerDestination(PartnerGates.of(session)));
     } catch (_) {
       if (!mounted) return;
       // The raw Dio exception used to be printed onto the screen.

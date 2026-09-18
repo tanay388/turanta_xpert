@@ -8,7 +8,6 @@ import 'package:intl/intl.dart';
 import '../../../app/shell/xpert_list_group.dart';
 import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
-import '../../../core/models/gender.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
@@ -40,9 +39,6 @@ class KycWizardScreen extends HookConsumerWidget {
 
     final fullName = useTextEditingController();
     final dob = useState<DateTime?>(null);
-    final gender = useState<String?>(
-      ref.read(authProvider).valueOrNull?.profile?.gender,
-    );
     final aadhaarFront = useState<String?>(null);
     final aadhaarBack = useState<String?>(null);
     final aadhaarNumber = useTextEditingController();
@@ -145,10 +141,6 @@ class KycWizardScreen extends HookConsumerWidget {
             error.value = ref.t('kyc.error.dob_required');
             return false;
           }
-          if (gender.value == null) {
-            error.value = ref.t('kyc.error.gender_required');
-            return false;
-          }
           return true;
         case 1:
           if (aadhaarFront.value == null || aadhaarBack.value == null) {
@@ -234,7 +226,6 @@ class KycWizardScreen extends HookConsumerWidget {
         await ref.read(partnerAuthApiProvider).upsertKyc({
           'fullName': fullName.text.trim(),
           'dateOfBirth': DateFormat('yyyy-MM-dd').format(dob.value!),
-          'gender': gender.value,
           'aadhaarFrontUrl': aadhaarFront.value,
           'aadhaarBackUrl': aadhaarBack.value,
           'aadhaarNumber': KycInputs.bare(aadhaarNumber.text),
@@ -313,12 +304,6 @@ class KycWizardScreen extends HookConsumerWidget {
                 value: dob.value,
                 enabled: !busy.value,
                 onPick: (picked) => dob.value = picked,
-              ),
-              const SizedBox(height: XpertSpacing.md),
-              _GenderField(
-                value: gender.value,
-                enabled: !busy.value,
-                onPick: (picked) => gender.value = picked,
               ),
             ],
           );
@@ -482,7 +467,6 @@ class KycWizardScreen extends HookConsumerWidget {
           );
         default:
           final docsOk =
-              gender.value != null &&
               aadhaarFront.value != null &&
               aadhaarBack.value != null &&
               (!hasPan.value || panFront.value != null);
@@ -505,14 +489,6 @@ class KycWizardScreen extends HookConsumerWidget {
                         : DateFormat('dd MMM yyyy').format(dob.value!),
                     onEdit: () => step.value = 0,
                     ok: dob.value != null,
-                  ),
-                  KycReviewRow(
-                    label: ref.t('profile.gender'),
-                    value: gender.value == null
-                        ? '—'
-                        : ref.t(genderLabelKey(gender.value!)),
-                    onEdit: () => step.value = 0,
-                    ok: gender.value != null,
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.aadhaar_number'),
@@ -705,107 +681,6 @@ class _Intro extends StatelessWidget {
 
 /// Date of birth, capped so an under-18 date cannot be picked in the first
 /// place — it used to be selectable up to today and rejected afterwards.
-/// Male, female, or other — three options a partner can see and tap, because
-/// this is asked once, at onboarding, and a dropdown hides two of them.
-class _GenderField extends ConsumerWidget {
-  const _GenderField({
-    required this.value,
-    required this.onPick,
-    required this.enabled,
-  });
-
-  final String? value;
-  final ValueChanged<String> onPick;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          ref.t('profile.gender').toUpperCase(),
-          style: XpertTypography.eyebrow.copyWith(
-            color: XpertColors.muted,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: XpertSpacing.sm),
-        Row(
-          children: [
-            for (final option in kGenderOptions) ...[
-              if (option != kGenderOptions.first)
-                const SizedBox(width: XpertSpacing.sm),
-              Expanded(
-                child: _GenderChip(
-                  label: ref.t(genderLabelKey(option)),
-                  selected: value == option,
-                  onTap: enabled ? () => onPick(option) : null,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _GenderChip extends StatelessWidget {
-  const _GenderChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: Material(
-        color: selected
-            ? XpertColors.heroAccent.withValues(alpha: 0.10)
-            : const Color(0xFFF6F9FB),
-        borderRadius: BorderRadius.circular(XpertRadius.lg),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(XpertRadius.lg),
-          child: Container(
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(XpertRadius.lg),
-              border: Border.all(
-                color: selected
-                    ? XpertColors.heroAccent
-                    : const Color(0xFFDCE4EA),
-                width: selected ? 1.8 : 1.2,
-              ),
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                color: selected
-                    ? XpertColors.heroAccent
-                    : XpertColors.onSurface,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DobField extends ConsumerWidget {
   const _DobField({
     required this.value,

@@ -8,6 +8,7 @@ import '../core/network/app_version_gate.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_verification_screen.dart';
 import '../features/auth/presentation/pending_approval_screen.dart';
+import '../features/gender/presentation/gender_screen.dart';
 import '../features/home/presentation/attendance_history_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/hub/presentation/hub_screen.dart';
@@ -34,6 +35,7 @@ class _Routes {
   static const login = '/login';
   static const otp = '/otp';
   static const language = '/language';
+  static const gender = '/gender';
   static const legalConsent = '/legal-consent';
   static const kyc = '/kyc';
   static const pending = '/pending-approval';
@@ -54,7 +56,13 @@ class _Routes {
   static const Set<String> unauthenticated = {login, otp};
 
   /// Screens a partner is held on until they clear the gate behind them.
-  static const Set<String> gateScreens = {language, legalConsent, kyc, pending};
+  static const Set<String> gateScreens = {
+    language,
+    gender,
+    legalConsent,
+    kyc,
+    pending,
+  };
 
   /// Reachable in either direction: the login screen's consent line opens it
   /// before there is a session, and Settings opens it after. It is kept out of
@@ -68,6 +76,7 @@ class _Routes {
 class PartnerGates {
   const PartnerGates({
     required this.needsLanguage,
+    required this.needsGender,
     required this.needsLegalAcceptance,
     required this.needsKyc,
     required this.isPendingApproval,
@@ -76,12 +85,14 @@ class PartnerGates {
 
   PartnerGates.of(Session session)
     : needsLanguage = session.needsLanguage,
+      needsGender = session.needsGender,
       needsLegalAcceptance = session.needsLegalAcceptance,
       needsKyc = session.needsKyc,
       isPendingApproval = session.isPendingApproval,
       canUseHome = session.canUseHome;
 
   final bool needsLanguage;
+  final bool needsGender;
   final bool needsLegalAcceptance;
   final bool needsKyc;
   final bool isPendingApproval;
@@ -92,6 +103,7 @@ class PartnerGates {
 /// else home.
 String partnerDestination(PartnerGates gates) {
   if (gates.needsLanguage) return _Routes.language;
+  if (gates.needsGender) return _Routes.gender;
   if (gates.needsLegalAcceptance) return _Routes.legalConsent;
   if (gates.needsKyc) return _Routes.kyc;
   if (gates.isPendingApproval || !gates.canUseHome) return _Routes.pending;
@@ -128,6 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: _Routes.language,
         builder: (_, _) => const LanguageSelectionScreen(),
       ),
+      GoRoute(path: _Routes.gender, builder: (_, _) => const GenderScreen()),
       GoRoute(
         path: _Routes.legalConsent,
         builder: (_, _) => const LegalConsentScreen(),

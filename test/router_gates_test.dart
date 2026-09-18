@@ -3,12 +3,14 @@ import 'package:turanta_xpert/app/router.dart';
 
 PartnerGates gates({
   bool language = false,
+  bool gender = false,
   bool legal = false,
   bool kyc = false,
   bool pending = false,
   bool canUseHome = true,
 }) => PartnerGates(
   needsLanguage: language,
+  needsGender: gender,
   needsLegalAcceptance: legal,
   needsKyc: kyc,
   isPendingApproval: pending,
@@ -27,6 +29,7 @@ void main() {
 
   test('gates are answered in order', () {
     expect(partnerDestination(gates(language: true, legal: true)), '/language');
+    expect(partnerDestination(gates(gender: true, legal: true)), '/gender');
     expect(partnerDestination(gates(legal: true, kyc: true)), '/legal-consent');
     expect(partnerDestination(gates(kyc: true)), '/kyc');
     expect(partnerDestination(gates(pending: true)), '/pending-approval');
@@ -37,6 +40,7 @@ void main() {
   test('a partner with nothing owed is let off the gate screens', () {
     for (final loc in [
       '/language',
+      '/gender',
       '/legal-consent',
       '/kyc',
       '/pending-approval',
@@ -54,5 +58,13 @@ void main() {
   test('a partner still owing one gate is pulled off the others', () {
     expect(partnerRedirect(gates(kyc: true), '/pending-approval'), '/kyc');
     expect(partnerRedirect(gates(kyc: true), '/leave'), '/kyc');
+  });
+
+  test('an approved partner who was never asked their gender is asked now', () {
+    // The whole point of the gate: partners who onboarded before the question
+    // existed are already past KYC and sitting on home.
+    final approved = gates(gender: true);
+    expect(partnerRedirect(approved, '/home'), '/gender');
+    expect(partnerRedirect(approved, '/gender'), isNull);
   });
 }

@@ -32,6 +32,13 @@ class Session {
   bool get needsLanguage => profile?.needsLanguage ?? true;
   bool get needsKyc => profile?.needsKyc ?? true;
 
+  /// Asked of everyone, including partners who onboarded before the question
+  /// existed. Defaults false so an unloaded profile does not pin them here.
+  bool get needsGender {
+    final profile = this.profile;
+    return profile != null && (profile.gender ?? '').isEmpty;
+  }
+
   /// Defaults false: a partner whose profile has not loaded should not be
   /// pinned to the consent gate by a missing field.
   bool get needsLegalAcceptance => profile?.needsLegalAcceptance ?? false;

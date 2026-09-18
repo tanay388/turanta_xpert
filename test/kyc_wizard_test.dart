@@ -119,8 +119,6 @@ Future<void> _fillToReview(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('OK'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Female'));
-  await tester.pumpAndSettle();
   await _continue(tester);
 
   await _upload(tester, 'Aadhaar front');
@@ -211,44 +209,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Male'));
-      await tester.pumpAndSettle();
       await _continue(tester);
 
       expect(find.text('Uploaded — tap to retake'), findsNothing);
       await _upload(tester, 'Aadhaar front');
       expect(find.text('Uploaded — tap to retake'), findsOneWidget);
-    });
-
-    testWidgets('asks for gender, and will not go on without it', (
-      tester,
-    ) async {
-      await _pump(tester);
-      await tester.enterText(_field('Full name'), 'Tanay Deo');
-      await tester.tap(find.text('Select date of birth'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-      await _continue(tester);
-
-      // Still on the personal step, with the reason why.
-      expect(find.text('Select your gender'), findsOneWidget);
-      expect(find.text('Other'), findsOneWidget);
-
-      await tester.tap(find.text('Other'));
-      await tester.pumpAndSettle();
-      await _continue(tester);
-      expect(find.text('Aadhaar front'), findsOneWidget);
-    });
-
-    testWidgets('sends the gender it was given', (tester) async {
-      await _pump(tester);
-      await _fillToReview(tester);
-      await _continue(tester);
-      await tester.tap(find.text('Submit KYC'));
-      await tester.pumpAndSettle();
-
-      expect(api.sent!['gender'], 'Female');
     });
 
     testWidgets('rejects a PAN of the right length but the wrong shape', (
