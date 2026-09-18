@@ -54,6 +54,10 @@ TalkerDioLogger createHttpLogger() {
 const authTokenTimeout = Duration(seconds: 12);
 const deviceHeadersTimeout = Duration(seconds: 5);
 
+/// Marks a request that was never sent because Firebase did not hand over a
+/// token, so a screen can say that rather than blaming the network.
+const idTokenTimeoutMarker = 'firebase-id-token-timeout';
+
 /// The ID token, or a [TimeoutException] rather than a wait with no end.
 Future<String?> idTokenOrTimeout(
   Future<String?> Function() fetch, {
@@ -80,6 +84,7 @@ class FirebaseAuthInterceptor extends Interceptor {
           DioException.connectionTimeout(
             timeout: authTokenTimeout,
             requestOptions: options,
+            error: idTokenTimeoutMarker,
           ),
         );
       }

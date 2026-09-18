@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../core/i18n/context_t.dart';
+import '../core/models/partner_user.dart';
+import '../core/network/dio_client.dart';
 import '../core/theme/xpert_tokens.dart';
 import '../features/auth/presentation/auth_controller.dart';
 
@@ -58,9 +60,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     }
   }
 
-  /// A partner cannot act on "DioException [connection timeout]", and the
-  /// thing they can act on — a bad connection — is the usual cause.
+  /// A partner cannot act on "DioException [connection timeout]". They can act
+  /// on a bad connection, and the two ways of not getting through — the server
+  /// never answering and the sign-in never being confirmed — are worth saying
+  /// apart, because only one of them means the phone is offline.
   String _messageFor(Object error) {
+    if (error is ApiException) {
+      return switch (error.kind) {
+        ApiFailure.network => ref.t('splash.offline'),
+        ApiFailure.signIn => ref.t('splash.signin_timeout'),
+        ApiFailure.server => error.message,
+      };
+    }
     const offline = {
       DioExceptionType.connectionTimeout,
       DioExceptionType.sendTimeout,
@@ -69,7 +80,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       DioExceptionType.unknown,
     };
     if (error is DioException && offline.contains(error.type)) {
-      return ref.t('splash.offline');
+      return error.error == idTokenTimeoutMarker
+          ? ref.t('splash.signin_timeout')
+          : ref.t('splash.offline');
     }
     return error.toString();
   }

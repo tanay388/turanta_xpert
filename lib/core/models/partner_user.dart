@@ -1,28 +1,11 @@
 import 'partner_break.dart';
 import 'partner_shift.dart';
 
-enum UserRole {
-  user,
-  partner,
-  supervisor,
-  warehouseAdmin,
-  admin,
-}
+enum UserRole { user, partner, supervisor, warehouseAdmin, admin }
 
-enum UserStatus {
-  active,
-  pendingApproval,
-  suspended,
-  rejected,
-  deactivated,
-}
+enum UserStatus { active, pendingApproval, suspended, rejected, deactivated }
 
-enum PartnerKycStatus {
-  draft,
-  submitted,
-  approved,
-  rejected,
-}
+enum PartnerKycStatus { draft, submitted, approved, rejected }
 
 UserRole userRoleFromApi(String? value) {
   switch (value) {
@@ -141,8 +124,7 @@ class PartnerUser {
       warehouseId: (json['warehouseId'] as num?)?.toInt(),
       kycStatus: kycStatusFromApi(json['kycStatus'] as String?),
       kycComplete: json['kycComplete'] as bool? ?? false,
-      needsLegalAcceptance:
-          json['needsLegalAcceptance'] as bool? ?? false,
+      needsLegalAcceptance: json['needsLegalAcceptance'] as bool? ?? false,
       whatsappOptIn: json['whatsappOptIn'] as bool? ?? true,
       pushOptIn: json['pushOptIn'] as bool? ?? true,
     );
@@ -234,6 +216,7 @@ class ApiException implements Exception {
     this.code,
     this.statusCode,
     this.details,
+    this.kind = ApiFailure.server,
   });
 
   final String message;
@@ -241,6 +224,22 @@ class ApiException implements Exception {
   final int? statusCode;
   final Map<String, dynamic>? details;
 
+  /// What went wrong in terms a screen can act on: [message] is written for
+  /// whoever is reading the logs, not for a partner holding the phone.
+  final ApiFailure kind;
+
   @override
   String toString() => message;
+}
+
+/// Why a call failed, for screens that have to say something useful about it.
+enum ApiFailure {
+  /// The request never got an answer: no network, or one too slow to wait for.
+  network,
+
+  /// Firebase never handed over an ID token, so nothing was sent at all.
+  signIn,
+
+  /// The server answered, and said no.
+  server,
 }

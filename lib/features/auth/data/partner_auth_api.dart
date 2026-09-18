@@ -58,10 +58,7 @@ class PartnerAuthApi {
           ),
         );
       }
-      final res = await _dio.patch<Map<String, dynamic>>(
-        '/user',
-        data: form,
-      );
+      final res = await _dio.patch<Map<String, dynamic>>('/user', data: form);
       return PartnerUser.fromJson(res.data!);
     } on DioException catch (e) {
       throw _mapDio(e);
@@ -200,6 +197,13 @@ class PartnerAuthApi {
       );
     }
 
+    if (e.error == idTokenTimeoutMarker) {
+      return ApiException(
+        message: 'Firebase did not return an ID token in time.',
+        kind: ApiFailure.signIn,
+      );
+    }
+
     final typeHint = switch (e.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
@@ -213,6 +217,13 @@ class PartnerAuthApi {
     return ApiException(
       message: typeHint,
       statusCode: e.response?.statusCode,
+      kind: switch (e.type) {
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.sendTimeout ||
+        DioExceptionType.receiveTimeout ||
+        DioExceptionType.connectionError => ApiFailure.network,
+        _ => ApiFailure.server,
+      },
     );
   }
 }
