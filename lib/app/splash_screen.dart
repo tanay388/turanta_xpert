@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -42,7 +43,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.hasError) {
-        setState(() => _error = auth.error.toString());
+        setState(() => _error = _messageFor(auth.error!));
         return;
       }
       final session = auth.valueOrNull;
@@ -53,8 +54,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       context.go(_destinationFor(session));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = _messageFor(e));
     }
+  }
+
+  /// A partner cannot act on "DioException [connection timeout]", and the
+  /// thing they can act on — a bad connection — is the usual cause.
+  String _messageFor(Object error) {
+    const offline = {
+      DioExceptionType.connectionTimeout,
+      DioExceptionType.sendTimeout,
+      DioExceptionType.receiveTimeout,
+      DioExceptionType.connectionError,
+      DioExceptionType.unknown,
+    };
+    if (error is DioException && offline.contains(error.type)) {
+      return ref.t('splash.offline');
+    }
+    return error.toString();
   }
 
   String _destinationFor(Session session) {

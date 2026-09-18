@@ -100,6 +100,7 @@
   "settings.legal.error": "Documents load nahi hue",
   "settings.signout": "Sign out",
   "splash.retry": "Phir se try karo",
+  "splash.offline": "Turanta se connect nahi ho paya. Internet check karke dobara try karo.",
   "splash.error": "Server se connect nahi ho paya. Connection check karke try karo.",
   "splash.signed_in_as": "{phone} se sign in hai",
   "splash.sign_out": "Sign out",

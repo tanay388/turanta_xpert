@@ -100,6 +100,7 @@
   "settings.legal.error": "दस्तावेज़ लोड नहीं हो सके",
   "settings.signout": "साइन आउट",
   "splash.retry": "फिर से कोशिश करें",
+  "splash.offline": "तुरंता से कनेक्ट नहीं हो पाया। इंटरनेट देखें और फिर कोशिश करें।",
   "splash.error": "सर्वर से कनेक्ट नहीं हो सका। कनेक्शन जाँचकर फिर कोशिश करें।",
   "splash.signed_in_as": "{phone} से साइन इन है",
   "splash.sign_out": "साइन आउट",

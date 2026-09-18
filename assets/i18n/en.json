@@ -100,6 +100,7 @@
   "settings.legal.error": "Couldn't load documents",
   "settings.signout": "Sign out",
   "splash.retry": "Retry",
+  "splash.offline": "Couldn't reach Turanta. Check your connection and try again.",
   "splash.error": "Couldn't reach the server. Check your connection and try again.",
   "splash.signed_in_as": "Signed in as {phone}",
   "splash.sign_out": "Sign out",
