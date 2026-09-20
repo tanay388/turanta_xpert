@@ -119,7 +119,20 @@ Future<void> _fillAddress(WidgetTester tester) async {
   await tester.enterText(_field('Pincode'), '411038');
   await tester.enterText(_field('City'), 'Pune');
   await tester.enterText(_field('State'), 'Maharashtra');
+  await _dropPin(tester);
   await _continue(tester);
+}
+
+/// Opens the map and confirms wherever the pin already sits.
+///
+/// The map itself is a platform view that never renders under `flutter test`,
+/// which is fine: the pin is at the camera's starting centre from the first
+/// frame, so confirming is meaningful without one.
+Future<void> _dropPin(WidgetTester tester) async {
+  await tester.tap(find.text('Mark your home on the map'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Confirm this location'));
+  await tester.pumpAndSettle();
 }
 
 /// Fills every step with valid input and lands on Review.
@@ -316,6 +329,42 @@ void main() {
       expect(find.text('Step 2 of 7'), findsOneWidget);
     });
 
+    testWidgets('will not leave the address step without a pin', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tester.enterText(_field('Full name'), 'Tanay Deo');
+      await tester.tap(find.text('Select date of birth'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await _continue(tester);
+
+      await tester.enterText(_field('House / flat number'), 'B-404');
+      await tester.enterText(_field('Street / area'), 'Paud Road');
+      await tester.enterText(_field('Pincode'), '411038');
+      await tester.enterText(_field('City'), 'Pune');
+      await tester.enterText(_field('State'), 'Maharashtra');
+      await _continue(tester);
+
+      // Typed text alone does not locate a house in a Kothrud lane, which is
+      // the whole reason the pin exists.
+      expect(find.text('Mark your home on the map'), findsWidgets);
+      expect(find.text('Step 2 of 7'), findsOneWidget);
+    });
+
+    testWidgets('sends the pin it was given', (tester) async {
+      await _pump(tester);
+      await _fillToReview(tester);
+      await _continue(tester);
+      await tester.tap(find.text('Submit KYC'));
+      await tester.pumpAndSettle();
+
+      final sent = api.sent!;
+      expect(sent['latitude'], isA<double>());
+      expect(sent['longitude'], isA<double>());
+    });
+
     testWidgets('sends the address, and the account it belongs to', (
       tester,
     ) async {
@@ -351,7 +400,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget<TextField>(_field('Account holder name')).controller!.text,
+        tester
+            .widget<TextField>(_field('Account holder name'))
+            .controller!
+            .text,
         'Tanay Deo',
       );
     });

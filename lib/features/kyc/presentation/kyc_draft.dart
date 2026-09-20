@@ -33,7 +33,8 @@ class KycDraft {
       if (decoded is! Map) return null;
       return KycDraft({
         for (final entry in decoded.entries)
-          if (entry.value is String) entry.key.toString(): entry.value as String,
+          if (entry.value is String)
+            entry.key.toString(): entry.value as String,
       });
     } catch (_) {
       // A draft that cannot be read is not worth failing onboarding over.

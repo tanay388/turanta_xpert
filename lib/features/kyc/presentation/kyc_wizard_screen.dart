@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,7 @@ import '../../../core/i18n/context_t.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
+import '../../address/presentation/widgets/address_fields.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'kyc_draft.dart';
 import '../../auth/presentation/widgets/auth_text_field.dart';
@@ -58,6 +60,7 @@ class KycWizardScreen extends HookConsumerWidget {
     final busy = useState(false);
     final error = useState<String?>(null);
     final scroll = useScrollController();
+
     /// Which way the next transition should slide.
     final goingBack = useState(false);
 
@@ -68,7 +71,6 @@ class KycWizardScreen extends HookConsumerWidget {
       if (scroll.hasClients) scroll.jumpTo(0);
       return null;
     }, [step.value]);
-
 
     final fullName = useTextEditingController();
     final dob = useState<DateTime?>(null);
@@ -89,6 +91,8 @@ class KycWizardScreen extends HookConsumerWidget {
     final city = useTextEditingController();
     final stateName = useTextEditingController();
     final pincode = useTextEditingController();
+    final pin = useState<LatLng?>(null);
+    final formatted = useState<String?>(null);
     final relation = useState('self');
     final passbook = useState<String?>(null);
     final account = useTextEditingController();
@@ -119,8 +123,13 @@ class KycWizardScreen extends HookConsumerWidget {
           city.text = draft['city'] ?? city.text;
           stateName.text = draft['state'] ?? stateName.text;
           pincode.text = draft['pincode'] ?? pincode.text;
+          final lat = double.tryParse(draft['latitude'] ?? '');
+          final lng = double.tryParse(draft['longitude'] ?? '');
+          if (lat != null && lng != null) pin.value = LatLng(lat, lng);
+          formatted.value = draft['formattedAddress'] ?? formatted.value;
           account.text = draft['bankAccountNumber'] ?? account.text;
-          accountConfirm.text = draft['bankAccountNumber'] ?? accountConfirm.text;
+          accountConfirm.text =
+              draft['bankAccountNumber'] ?? accountConfirm.text;
           ifsc.text = draft['bankIfsc'] ?? ifsc.text;
           bankName.text = draft['bankName'] ?? bankName.text;
           holderName.text = draft['accountHolderName'] ?? holderName.text;
@@ -158,6 +167,9 @@ class KycWizardScreen extends HookConsumerWidget {
         'city': city.text,
         'state': stateName.text,
         'pincode': pincode.text,
+        'latitude': pin.value?.latitude.toString(),
+        'longitude': pin.value?.longitude.toString(),
+        'formattedAddress': formatted.value,
         'bankAccountNumber': account.text,
         'bankIfsc': ifsc.text,
         'bankName': bankName.text,
@@ -320,6 +332,10 @@ class KycWizardScreen extends HookConsumerWidget {
             error.value = ref.t('kyc.error.state_required');
             return false;
           }
+          if (pin.value == null) {
+            error.value = ref.t('kyc.error.pin_required');
+            return false;
+          }
           return true;
         case KycStep.aadhaar:
           if (aadhaarFront.value == null || aadhaarBack.value == null) {
@@ -430,10 +446,12 @@ class KycWizardScreen extends HookConsumerWidget {
           'city': city.text.trim(),
           'state': stateName.text.trim(),
           'pincode': pincode.text.trim(),
+          'latitude': pin.value?.latitude,
+          'longitude': pin.value?.longitude,
+          if (formatted.value != null) 'formattedAddress': formatted.value,
           if (uan.text.trim().isNotEmpty) 'uanNumber': uan.text.trim(),
           if (gst.text.trim().isNotEmpty) 'gstNumber': gst.text.trim(),
-          if (eshram.text.trim().isNotEmpty)
-            'eshramNumber': eshram.text.trim(),
+          if (eshram.text.trim().isNotEmpty) 'eshramNumber': eshram.text.trim(),
           'submit': true,
         });
         if (uid != null) await KycDraft.clear(uid);
@@ -509,72 +527,19 @@ class KycWizardScreen extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Intro(text: ref.t('kyc.intro.address')),
-              AuthTextField(
-                label: ref.t('kyc.field.line1'),
-                controller: line1,
-                hint: ref.t('kyc.field.line1_hint'),
+              AddressFields(
+                line1: line1,
+                line2: line2,
+                landmark: landmark,
+                pincode: pincode,
+                city: city,
+                state: stateName,
+                pin: pin.value,
+                onPinChanged: (next, line) {
+                  pin.value = next;
+                  if (line != null) formatted.value = line;
+                },
                 enabled: !busy.value,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: XpertSpacing.md),
-              AuthTextField(
-                label: ref.t('kyc.field.line2'),
-                controller: line2,
-                hint: ref.t('kyc.field.line2_hint'),
-                enabled: !busy.value,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: XpertSpacing.md),
-              AuthTextField(
-                label: ref.t('kyc.field.landmark'),
-                controller: landmark,
-                hint: ref.t('kyc.field.landmark_hint'),
-                enabled: !busy.value,
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: XpertSpacing.xl),
-              SectionLabel(ref.t('kyc.section.where')),
-              const SizedBox(height: XpertSpacing.sm),
-              AuthTextField(
-                label: ref.t('kyc.field.pincode'),
-                controller: pincode,
-                hint: ref.t('kyc.field.pincode_hint'),
-                enabled: !busy.value,
-                keyboardType: TextInputType.number,
-                inputFormatters: KycInputs.pincode,
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: XpertSpacing.md),
-              // Short, and usually already answered from the hub they picked,
-              // so these sit side by side rather than eating two more rows.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: AuthTextField(
-                      label: ref.t('kyc.field.city'),
-                      controller: city,
-                      hint: ref.t('kyc.field.city_hint'),
-                      enabled: !busy.value,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  const SizedBox(width: XpertSpacing.md),
-                  Expanded(
-                    child: AuthTextField(
-                      label: ref.t('kyc.field.state'),
-                      controller: stateName,
-                      hint: ref.t('kyc.field.state_hint'),
-                      enabled: !busy.value,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.done,
-                    ),
-                  ),
-                ],
               ),
             ],
           );
@@ -719,7 +684,10 @@ class KycWizardScreen extends HookConsumerWidget {
               KycChoiceRow(
                 options: [
                   for (final key in _relations)
-                    KycChoice(value: key, label: ref.t('kyc.relationship.$key')),
+                    KycChoice(
+                      value: key,
+                      label: ref.t('kyc.relationship.$key'),
+                    ),
                 ],
                 selected: relation.value,
                 enabled: !busy.value,

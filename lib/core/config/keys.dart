@@ -13,4 +13,21 @@ class AppKeys {
     if (override.isNotEmpty) return override;
     return 'https://api.myturanta.com';
   }
+
+  /// Google Geocoding API key, used to turn a dropped pin into a city, state
+  /// and pincode. Mirrors the consumer app, which calls the same API the same
+  /// way. Override with `--dart-define=GEOCODING_KEY=…`.
+  ///
+  /// Note this key ships inside the binary and so cannot carry an app
+  /// restriction — it is API-restricted to Geocoding + Places instead.
+  static const googleGeocodingKey = String.fromEnvironment(
+    'GEOCODING_KEY',
+    defaultValue: 'AIzaSyAqv10vV7oLJrZ75OcSFkVuaoE9HsHBnRM',
+  );
+
+  /// Places Autocomplete + Place Details. Same key unless overridden.
+  static const googlePlacesKey = String.fromEnvironment(
+    'PLACES_KEY',
+    defaultValue: googleGeocodingKey,
+  );
 }

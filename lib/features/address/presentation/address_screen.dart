@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../app/router.dart';
@@ -8,8 +9,8 @@ import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
 import '../../auth/presentation/auth_controller.dart';
-import '../../auth/presentation/widgets/auth_text_field.dart';
 import '../../kyc/presentation/widgets/kyc_inputs.dart';
+import 'widgets/address_fields.dart';
 
 /// Asks a partner for their home address, once.
 ///
@@ -32,6 +33,8 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
   final _city = TextEditingController();
   final _state = TextEditingController();
 
+  LatLng? _pin;
+  String? _formatted;
   bool _busy = false;
   String? _error;
   bool _prefilled = false;
@@ -65,6 +68,7 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
     }
     if (_city.text.trim().length < 2) return ref.t('kyc.error.city_required');
     if (_state.text.trim().length < 2) return ref.t('kyc.error.state_required');
+    if (_pin == null) return ref.t('kyc.error.pin_required');
     return null;
   }
 
@@ -88,6 +92,9 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
         'pincode': _pincode.text.trim(),
         'city': _city.text.trim(),
         'state': _state.text.trim(),
+        'latitude': _pin!.latitude,
+        'longitude': _pin!.longitude,
+        if (_formatted != null) 'formattedAddress': _formatted,
       });
       await ref.read(authProvider.notifier).refreshProfile();
       if (!mounted) return;
@@ -134,68 +141,19 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
                       ),
                     ),
                     const SizedBox(height: XpertSpacing.lg),
-                    AuthTextField(
-                      label: ref.t('kyc.field.line1'),
-                      controller: _line1,
-                      hint: ref.t('kyc.field.line1_hint'),
+                    AddressFields(
+                      line1: _line1,
+                      line2: _line2,
+                      landmark: _landmark,
+                      pincode: _pincode,
+                      city: _city,
+                      state: _state,
+                      pin: _pin,
+                      onPinChanged: (next, formatted) => setState(() {
+                        _pin = next;
+                        _formatted = formatted ?? _formatted;
+                      }),
                       enabled: !_busy,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: XpertSpacing.md),
-                    AuthTextField(
-                      label: ref.t('kyc.field.line2'),
-                      controller: _line2,
-                      hint: ref.t('kyc.field.line2_hint'),
-                      enabled: !_busy,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: XpertSpacing.md),
-                    AuthTextField(
-                      label: ref.t('kyc.field.landmark'),
-                      controller: _landmark,
-                      hint: ref.t('kyc.field.landmark_hint'),
-                      enabled: !_busy,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: XpertSpacing.lg),
-                    AuthTextField(
-                      label: ref.t('kyc.field.pincode'),
-                      controller: _pincode,
-                      hint: ref.t('kyc.field.pincode_hint'),
-                      enabled: !_busy,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: KycInputs.pincode,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: XpertSpacing.md),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: AuthTextField(
-                            label: ref.t('kyc.field.city'),
-                            controller: _city,
-                            hint: ref.t('kyc.field.city_hint'),
-                            enabled: !_busy,
-                            textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.next,
-                          ),
-                        ),
-                        const SizedBox(width: XpertSpacing.md),
-                        Expanded(
-                          child: AuthTextField(
-                            label: ref.t('kyc.field.state'),
-                            controller: _state,
-                            hint: ref.t('kyc.field.state_hint'),
-                            enabled: !_busy,
-                            textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.done,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
