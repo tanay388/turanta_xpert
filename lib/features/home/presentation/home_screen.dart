@@ -52,6 +52,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (link == null || link.isEmpty) return;
     ref.read(pendingDeepLinkProvider.notifier).state = null;
     if (!mounted) return;
+    _openDeepLink(link);
+  }
+
+  /// Notification links are hand-written on the server, which deploys on its
+  /// own schedule and also serves the customer app — nothing checks them
+  /// against this router. An unroutable one leaves the partner on home rather
+  /// than throwing "no routes for location". Mirrors the consumer app's
+  /// `_consumeDeepLink`.
+  void _openDeepLink(String link) {
+    bool routable;
+    try {
+      routable = !GoRouter.of(
+        context,
+      ).configuration.findMatch(Uri.parse(link)).isError;
+    } catch (_) {
+      routable = false;
+    }
+    if (!routable) {
+      debugPrint('[deeplink] no route for "$link" — ignored');
+      return;
+    }
     context.push(link);
   }
 
@@ -61,7 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (next == null || next.isEmpty) return;
       ref.read(pendingDeepLinkProvider.notifier).state = null;
       unawaited(ref.read(jobsProvider.notifier).refresh(silent: true));
-      context.push(next);
+      _openDeepLink(next);
     });
 
     final attendance = ref.watch(attendanceProvider);
