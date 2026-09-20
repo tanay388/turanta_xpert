@@ -587,6 +587,10 @@
   "target.rate_per_hour": "₹{rate}/ghanta",
   "target.rating_from": "{count} ratings se",
   "target.top_band": "Sabse upar ka band — aapko sabse zyada rate milta hai",
+  "update.available.body": "Naye fixes aur improvements ke liye update karein. Bas ek minute lagega.",
+  "update.available.cta": "Abhi update karein",
+  "update.available.later": "Abhi nahi",
+  "update.available.title": "Naya version ready hai",
   "update.body": "Turanta Xpert ka yeh version ab supported nahi hai. Jobs milte rehne ke liye latest version par update karein.",
   "update.cta": "Abhi update karein",
   "update.title": "Update zaroori hai"

@@ -587,6 +587,10 @@
   "target.rate_per_hour": "₹{rate}/तास",
   "target.rating_from": "{count} रेटिंगमधून",
   "target.top_band": "सर्वात वरचा बँड — तुम्हाला सर्वाधिक रेट मिळतो",
+  "update.available.body": "नवीन सुधारणा मिळवण्यासाठी अपडेट करा. फक्त एक मिनिट लागेल.",
+  "update.available.cta": "आता अपडेट करा",
+  "update.available.later": "आता नको",
+  "update.available.title": "नवीन आवृत्ती तयार आहे",
   "update.body": "Turanta Xpert ची ही आवृत्ती आता समर्थित नाही. जॉब्स मिळत राहण्यासाठी कृपया नवीनतम आवृत्तीवर अपडेट करा.",
   "update.cta": "आत्ता अपडेट करा",
   "update.title": "अपडेट आवश्यक आहे"

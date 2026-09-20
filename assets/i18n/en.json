@@ -587,6 +587,10 @@
   "target.rate_per_hour": "₹{rate}/hr",
   "target.rating_from": "from {count} ratings",
   "target.top_band": "Top band — you earn the highest rate",
+  "update.available.body": "Update to get the latest fixes and improvements. It only takes a moment.",
+  "update.available.cta": "Update now",
+  "update.available.later": "Not now",
+  "update.available.title": "A new version is ready",
   "update.body": "This version of Turanta Xpert is no longer supported. Please update to the latest version to keep receiving jobs.",
   "update.cta": "Update now",
   "update.title": "Update required"

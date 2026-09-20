@@ -310,7 +310,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Force-update gate wins over everything.
       if (loc == '/update-required') return null;
-      if (ref.read(appVersionGateProvider).valueOrNull == false) {
+      if (ref.read(appVersionGateProvider).valueOrNull?.supported == false) {
         return '/update-required';
       }
 
