@@ -129,7 +129,9 @@ class LegalDocumentApi {
   /// Documents the partner must accept before onboarding continues.
   Future<LegalAcceptanceStatus> requiredDocuments() async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('/partner/legal/documents');
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/partner/legal/documents',
+      );
       return LegalAcceptanceStatus.fromJson(res.data ?? const {});
     } on DioException catch (e) {
       throw ApiException(
@@ -152,8 +154,8 @@ class LegalDocumentApi {
       throw ApiException(
         message: e.response?.data is Map
             ? (e.response!.data['message']?.toString() ??
-                e.message ??
-                'Failed to record acceptance')
+                  e.message ??
+                  'Failed to record acceptance')
             : e.message ?? 'Failed to record acceptance',
         statusCode: e.response?.statusCode,
       );
@@ -181,9 +183,10 @@ final legalDocumentApiProvider = Provider<LegalDocumentApi>((ref) {
   return LegalDocumentApi(ref.watch(dioProvider));
 });
 
-final legalDocumentsProvider = FutureProvider.autoDispose<List<LegalDocumentSummary>>((ref) {
-  return ref.watch(legalDocumentApiProvider).mine();
-});
+final legalDocumentsProvider =
+    FutureProvider.autoDispose<List<LegalDocumentSummary>>((ref) {
+      return ref.watch(legalDocumentApiProvider).mine();
+    });
 
 /// Not auto-disposed: the login screen is rebuilt on every keystroke in the
 /// phone field, and the consent documents change about once a year.
@@ -193,5 +196,5 @@ final legalConsentProvider = FutureProvider<LegalConsentDocuments>((ref) {
 
 final requiredLegalDocumentsProvider =
     FutureProvider.autoDispose<LegalAcceptanceStatus>((ref) {
-  return ref.watch(legalDocumentApiProvider).requiredDocuments();
-});
+      return ref.watch(legalDocumentApiProvider).requiredDocuments();
+    });

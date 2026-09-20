@@ -191,8 +191,9 @@ class _LegalConsentScreenState extends ConsumerState<LegalConsentScreen> {
                       AuthPrimaryButton(
                         label: ref.t('legal.consent.cta'),
                         isLoading: _busy,
-                        onPressed:
-                            allOpened && !_busy ? () => _accept(docs) : null,
+                        onPressed: allOpened && !_busy
+                            ? () => _accept(docs)
+                            : null,
                       ),
                     ],
                   ),
@@ -244,7 +245,10 @@ class _DocumentRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: XpertTypography.body.copyWith(fontSize: 15)),
+                  Text(
+                    name,
+                    style: XpertTypography.body.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     read ? readLabel : unreadLabel,

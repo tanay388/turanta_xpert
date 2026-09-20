@@ -241,8 +241,7 @@ class ShiftCard extends ConsumerWidget {
                         '',
                   ),
               window: partnerBreak?.windowLabel,
-              windowState:
-                  partnerBreak?.stateAt() ?? BreakWindowState.none,
+              windowState: partnerBreak?.stateAt() ?? BreakWindowState.none,
               // The server's cap when it has answered, the partner's own
               // length until then. Never a literal.
               capMinutes:

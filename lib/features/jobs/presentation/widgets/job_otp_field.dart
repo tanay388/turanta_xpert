@@ -142,10 +142,7 @@ class _Cell extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: filled
-          ? Text(
-              digit,
-              style: XpertTypography.metric.copyWith(fontSize: 24),
-            )
+          ? Text(digit, style: XpertTypography.metric.copyWith(fontSize: 24))
           : focused
           ? Container(
               width: 2,

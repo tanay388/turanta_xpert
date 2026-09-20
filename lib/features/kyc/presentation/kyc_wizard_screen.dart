@@ -535,9 +535,12 @@ class KycWizardScreen extends HookConsumerWidget {
                 city: city,
                 state: stateName,
                 pin: pin.value,
+                formattedAddress: formatted.value,
                 onPinChanged: (next, line) {
                   pin.value = next;
-                  if (line != null) formatted.value = line;
+                  // Replaced, never merged: keeping the previous line would
+                  // show the old address against a pin somewhere else.
+                  formatted.value = line;
                 },
                 enabled: !busy.value,
               ),

@@ -5,11 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../data/jobs_api.dart';
 
 class JobsState {
-  const JobsState({
-    this.jobs = const [],
-    this.loading = false,
-    this.error,
-  });
+  const JobsState({this.jobs = const [], this.loading = false, this.error});
 
   final List<PartnerJob> jobs;
   final bool loading;
@@ -48,8 +44,7 @@ class JobsState {
   /// *or* IN_PROGRESS — so an assigned job that has not been started yet still
   /// counts. Offering either action in this state produces a round trip whose
   /// only outcome is an error toast.
-  bool get blocksShiftExit =>
-      jobs.any((j) => j.isAssigned || j.isInProgress);
+  bool get blocksShiftExit => jobs.any((j) => j.isAssigned || j.isInProgress);
 
   JobsState copyWith({
     List<PartnerJob>? jobs,
@@ -106,15 +101,16 @@ class JobsController extends StateNotifier<JobsState> {
   }
 }
 
-final jobsProvider =
-    StateNotifierProvider<JobsController, JobsState>((ref) {
+final jobsProvider = StateNotifierProvider<JobsController, JobsState>((ref) {
   final controller = JobsController(ref.watch(jobsApiProvider));
   ref.onDispose(controller.stopPolling);
   return controller;
 });
 
-final partnerJobProvider =
-    FutureProvider.autoDispose.family<PartnerJob, int>((ref, id) async {
+final partnerJobProvider = FutureProvider.autoDispose.family<PartnerJob, int>((
+  ref,
+  id,
+) async {
   return ref.watch(jobsApiProvider).get(id);
 });
 
@@ -189,5 +185,5 @@ class JobHistoryController extends StateNotifier<JobHistoryState> {
 
 final jobHistoryProvider =
     StateNotifierProvider<JobHistoryController, JobHistoryState>((ref) {
-  return JobHistoryController(ref.watch(jobsApiProvider));
-});
+      return JobHistoryController(ref.watch(jobsApiProvider));
+    });

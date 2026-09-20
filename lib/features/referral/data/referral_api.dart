@@ -45,8 +45,7 @@ class ReferralInvite {
       jobsNeeded: (json['jobsNeeded'] as num?)?.toInt() ?? 0,
       paid:
           json['paid'] as bool? ??
-          json['referrerPaidAt'] != null ||
-              json['status'] == 'REWARDED',
+          json['referrerPaidAt'] != null || json['status'] == 'REWARDED',
       joinedAt: created is String ? DateTime.tryParse(created) : null,
     );
   }
@@ -144,10 +143,7 @@ class ReferralSummary {
 /// The offer as the server currently sets it, for screens that have no
 /// referral summary to read from (signup, KYC).
 class ReferralOffer {
-  const ReferralOffer({
-    required this.refereeAmount,
-    required this.refereeJobs,
-  });
+  const ReferralOffer({required this.refereeAmount, required this.refereeJobs});
 
   final double refereeAmount;
   final int refereeJobs;

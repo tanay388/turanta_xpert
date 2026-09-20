@@ -138,7 +138,9 @@ class _SearchablePickerScreenState
                       child: Text(
                         query.trim().isEmpty
                             ? widget.emptyText
-                            : ref.t('picker.no_matches', {'query': query.trim()}),
+                            : ref.t('picker.no_matches', {
+                                'query': query.trim(),
+                              }),
                         textAlign: TextAlign.center,
                         style: XpertTypography.caption.copyWith(
                           fontSize: 13.5,

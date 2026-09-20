@@ -41,7 +41,10 @@ class ReferralController extends Notifier<ReferralState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      state = state.copyWith(summary: await _api.getSummary(), isLoading: false);
+      state = state.copyWith(
+        summary: await _api.getSummary(),
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _message(e));
     }

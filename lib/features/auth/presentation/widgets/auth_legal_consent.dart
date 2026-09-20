@@ -68,13 +68,11 @@ class AuthLegalConsent extends HookConsumerWidget {
       final document = documents[slot];
       if (document == null) return TextSpan(text: label, style: base);
 
-      final recognizer = recognizers.putIfAbsent(
-        slot,
-        TapGestureRecognizer.new,
-      )..onTap = () => context.push(
-        '/legal-document',
-        extra: (document.name, document.pdfUrl),
-      );
+      final recognizer = recognizers.putIfAbsent(slot, TapGestureRecognizer.new)
+        ..onTap = () => context.push(
+          '/legal-document',
+          extra: (document.name, document.pdfUrl),
+        );
 
       return TextSpan(
         text: label,

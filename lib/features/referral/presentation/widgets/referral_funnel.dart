@@ -18,8 +18,7 @@ class ReferralInviteCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name =
-        item.refereeDisplayName?.trim().isNotEmpty == true
+    final name = item.refereeDisplayName?.trim().isNotEmpty == true
         ? item.refereeDisplayName!.trim()
         : ref.t('referral.friend.unnamed');
 

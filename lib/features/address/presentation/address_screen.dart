@@ -149,9 +149,12 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
                       city: _city,
                       state: _state,
                       pin: _pin,
+                      formattedAddress: _formatted,
                       onPinChanged: (next, formatted) => setState(() {
                         _pin = next;
-                        _formatted = formatted ?? _formatted;
+                        // Replaced, never merged: keeping the previous line
+                        // would show the old address against a new pin.
+                        _formatted = formatted;
                       }),
                       enabled: !_busy,
                     ),

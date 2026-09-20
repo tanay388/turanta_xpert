@@ -55,13 +55,17 @@ IconData _iconFor(String? category) {
   if (name.contains('laundry') || name.contains('iron')) {
     return Icons.local_laundry_service_rounded;
   }
-  if (name.contains('cook') || name.contains('kitchen') || name.contains('chef')) {
+  if (name.contains('cook') ||
+      name.contains('kitchen') ||
+      name.contains('chef')) {
     return Icons.restaurant_rounded;
   }
   if (name.contains('dish') || name.contains('utensil')) {
     return Icons.countertops_rounded;
   }
-  if (name.contains('clean') || name.contains('sweep') || name.contains('mop')) {
+  if (name.contains('clean') ||
+      name.contains('sweep') ||
+      name.contains('mop')) {
     return Icons.cleaning_services_rounded;
   }
   return Icons.home_repair_service_rounded;

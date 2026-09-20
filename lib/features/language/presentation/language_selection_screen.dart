@@ -42,8 +42,7 @@ class _LanguageSelectionScreenState
       if (!mounted) return;
       final saved = ref.read(authProvider).valueOrNull?.profile?.language;
       setState(() {
-        _selected =
-            AppLocale.tryParse(saved) ?? ref.read(localeProvider);
+        _selected = AppLocale.tryParse(saved) ?? ref.read(localeProvider);
       });
     });
   }
@@ -286,7 +285,9 @@ class _LanguageCard extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           inCurrentLanguage,
-                          style: XpertTypography.caption.copyWith(fontSize: 12.5),
+                          style: XpertTypography.caption.copyWith(
+                            fontSize: 12.5,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -301,9 +302,7 @@ class _LanguageCard extends ConsumerWidget {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selected
-                        ? XpertColors.primary
-                        : Colors.transparent,
+                    color: selected ? XpertColors.primary : Colors.transparent,
                     border: Border.all(
                       color: selected
                           ? XpertColors.primary

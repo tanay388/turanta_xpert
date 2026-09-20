@@ -103,7 +103,8 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                       const SizedBox(height: XpertSpacing.xl),
                       _JoiningBonusCard(bonus: bonus),
                     ],
-                    if (summary.totalEarned > 0 || summary.pendingAmount > 0) ...[
+                    if (summary.totalEarned > 0 ||
+                        summary.pendingAmount > 0) ...[
                       const SizedBox(height: XpertSpacing.xl),
                       _EarnedStrip(summary: summary),
                     ],
@@ -319,7 +320,10 @@ class _OfferRow extends StatelessWidget {
             children: [
               Text(label, style: XpertTypography.label.copyWith(fontSize: 14)),
               const SizedBox(height: 2),
-              Text(note, style: XpertTypography.caption.copyWith(fontSize: 12.5)),
+              Text(
+                note,
+                style: XpertTypography.caption.copyWith(fontSize: 12.5),
+              ),
             ],
           ),
         ),

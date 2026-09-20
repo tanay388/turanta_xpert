@@ -25,6 +25,7 @@ class AddressFields extends ConsumerWidget {
     required this.city,
     required this.state,
     required this.pin,
+    required this.formattedAddress,
     required this.onPinChanged,
     this.enabled = true,
   });
@@ -37,6 +38,9 @@ class AddressFields extends ConsumerWidget {
   final TextEditingController state;
 
   final LatLng? pin;
+
+  /// What the pin resolved to, shown in place of the coordinates.
+  final String? formattedAddress;
 
   /// Reports the pin and, when the lookup succeeded, the line Google wrote for
   /// it — kept alongside the typed address as a second reading of the place.
@@ -63,7 +67,12 @@ class AddressFields extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _PinTile(pin: pin, enabled: enabled, onTap: () => _openMap(context)),
+        _PinTile(
+          pin: pin,
+          formattedAddress: formattedAddress,
+          enabled: enabled,
+          onTap: () => _openMap(context),
+        ),
         const SizedBox(height: XpertSpacing.lg),
         AuthTextField(
           label: ref.t('kyc.field.line1'),
@@ -140,11 +149,13 @@ class AddressFields extends ConsumerWidget {
 class _PinTile extends ConsumerWidget {
   const _PinTile({
     required this.pin,
+    required this.formattedAddress,
     required this.enabled,
     required this.onTap,
   });
 
   final LatLng? pin;
+  final String? formattedAddress;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -189,9 +200,15 @@ class _PinTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
+                      // Never the raw coordinates: a partner cannot read
+                      // 18.50740, 73.80770 and tell whether it is their house.
                       dropped
-                          ? '${pin!.latitude.toStringAsFixed(5)}, ${pin!.longitude.toStringAsFixed(5)}'
+                          ? (formattedAddress?.trim().isNotEmpty ?? false
+                                ? formattedAddress!
+                                : ref.t('address.map.no_address'))
                           : ref.t('address.pin.hint'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: XpertTypography.caption.copyWith(fontSize: 12.5),
                     ),
                   ],
