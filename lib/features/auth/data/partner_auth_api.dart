@@ -86,6 +86,21 @@ class PartnerAuthApi {
     }
   }
 
+  /// Saves the home address. Unlike the rest of the KYC record this is
+  /// accepted at any status, which is what lets a partner already waiting on
+  /// approval supply the one field now holding it up.
+  Future<PartnerKyc> updateAddress(Map<String, dynamic> body) async {
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(
+        '/partner/kyc/address',
+        data: body,
+      );
+      return PartnerKyc.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw _mapDio(e);
+    }
+  }
+
   /// Edits bank / PAN / GST / UAN details (allowed even after approval).
   Future<PartnerKyc> updateFinancial(Map<String, dynamic> body) async {
     try {

@@ -263,3 +263,106 @@ class KycReviewRow extends StatelessWidget {
     );
   }
 }
+
+/// One option in a [KycChoiceRow].
+@immutable
+class KycChoice {
+  const KycChoice({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+/// A short list of mutually exclusive answers, picked in one tap.
+///
+/// A dropdown would be one tap to open, one to scroll, one to choose, and it
+/// hides every option but the chosen one — for five short labels that is worse
+/// on every count. Wraps rather than scrolls so nothing hides off the edge.
+class KycChoiceRow extends StatelessWidget {
+  const KycChoiceRow({
+    super.key,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    this.enabled = true,
+  });
+
+  final List<KycChoice> options;
+  final String selected;
+  final ValueChanged<String> onSelect;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: XpertSpacing.sm,
+      runSpacing: XpertSpacing.sm,
+      children: [
+        for (final option in options)
+          _ChoiceChip(
+            label: option.label,
+            selected: option.value == selected,
+            onTap: enabled ? () => onSelect(option.value) : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  const _ChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected
+            ? XpertColors.heroAccent.withValues(alpha: 0.10)
+            : const Color(0xFFF6F9FB),
+        borderRadius: BorderRadius.circular(XpertRadius.pill),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(XpertRadius.pill),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: XpertSpacing.md,
+              vertical: XpertSpacing.sm,
+            ),
+            // Painted over the box so the thicker selected border does not
+            // nudge the label sideways.
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(XpertRadius.pill),
+              border: Border.all(
+                color: selected
+                    ? XpertColors.heroAccent
+                    : const Color(0xFFDCE4EA),
+                width: selected ? 1.8 : 1.2,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.2,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: selected
+                    ? XpertColors.heroAccent
+                    : XpertColors.onSurface,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -7,6 +7,7 @@ PartnerGates gates({
   bool hub = false,
   bool legal = false,
   bool kyc = false,
+  bool address = false,
   bool pending = false,
   bool canUseHome = true,
 }) => PartnerGates(
@@ -15,6 +16,7 @@ PartnerGates gates({
   needsHub: hub,
   needsLegalAcceptance: legal,
   needsKyc: kyc,
+  needsAddress: address,
   isPendingApproval: pending,
   canUseHome: canUseHome,
 );
@@ -40,6 +42,13 @@ void main() {
     );
     expect(partnerDestination(gates(legal: true, kyc: true)), '/legal-consent');
     expect(partnerDestination(gates(kyc: true)), '/kyc');
+    expect(partnerDestination(gates(kyc: true, address: true)), '/kyc');
+    // Ahead of the pending gate on purpose: a partner waiting on approval is
+    // exactly who has to supply this, because it is what unblocks the review.
+    expect(
+      partnerDestination(gates(address: true, pending: true)),
+      '/address',
+    );
     expect(partnerDestination(gates(pending: true)), '/pending-approval');
     expect(partnerDestination(gates(canUseHome: false)), '/pending-approval');
     expect(partnerDestination(gates()), '/home');

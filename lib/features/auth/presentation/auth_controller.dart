@@ -55,6 +55,11 @@ class Session {
   /// Defaults false: a partner whose profile has not loaded should not be
   /// pinned to the consent gate by a missing field.
   bool get needsLegalAcceptance => profile?.needsLegalAcceptance ?? false;
+
+  /// Asked of everyone without an address on file, whatever their KYC status —
+  /// including a partner waiting on approval, since the address is now the one
+  /// thing standing between them and it.
+  bool get needsAddress => profile?.needsAddress ?? false;
   bool get isPendingApproval =>
       profile?.isPendingApproval == true && (profile?.kycComplete ?? false);
   bool get canUseHome =>

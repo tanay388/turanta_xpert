@@ -7,6 +7,7 @@ import '../features/auth/presentation/update_required_screen.dart';
 import '../core/network/app_version_gate.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_verification_screen.dart';
+import '../features/address/presentation/address_screen.dart';
 import '../features/auth/presentation/pending_approval_screen.dart';
 import '../features/gender/presentation/gender_screen.dart';
 import '../features/hub/presentation/hub_selection_screen.dart';
@@ -40,6 +41,7 @@ class _Routes {
   static const hubSelection = '/hub-selection';
   static const legalConsent = '/legal-consent';
   static const kyc = '/kyc';
+  static const address = '/address';
   static const pending = '/pending-approval';
   static const home = '/home';
   static const leave = '/leave';
@@ -64,6 +66,7 @@ class _Routes {
     hubSelection,
     legalConsent,
     kyc,
+    address,
     pending,
   };
 
@@ -83,6 +86,7 @@ class PartnerGates {
     required this.needsHub,
     required this.needsLegalAcceptance,
     required this.needsKyc,
+    required this.needsAddress,
     required this.isPendingApproval,
     required this.canUseHome,
   });
@@ -93,6 +97,7 @@ class PartnerGates {
       needsHub = session.needsHub,
       needsLegalAcceptance = session.needsLegalAcceptance,
       needsKyc = session.needsKyc,
+      needsAddress = session.needsAddress,
       isPendingApproval = session.isPendingApproval,
       canUseHome = session.canUseHome;
 
@@ -101,6 +106,7 @@ class PartnerGates {
   final bool needsHub;
   final bool needsLegalAcceptance;
   final bool needsKyc;
+  final bool needsAddress;
   final bool isPendingApproval;
   final bool canUseHome;
 }
@@ -113,6 +119,10 @@ String partnerDestination(PartnerGates gates) {
   if (gates.needsHub) return _Routes.hubSelection;
   if (gates.needsLegalAcceptance) return _Routes.legalConsent;
   if (gates.needsKyc) return _Routes.kyc;
+  // Deliberately ahead of the pending gate: a partner waiting on approval is
+  // exactly who needs to supply this, because their file cannot be approved
+  // without it and the KYC itself is locked.
+  if (gates.needsAddress) return _Routes.address;
   if (gates.isPendingApproval || !gates.canUseHome) return _Routes.pending;
   return _Routes.home;
 }
@@ -157,6 +167,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const LegalConsentScreen(),
       ),
       GoRoute(path: _Routes.kyc, builder: (_, _) => const KycWizardScreen()),
+      GoRoute(path: _Routes.address, builder: (_, _) => const AddressScreen()),
       GoRoute(
         path: _Routes.pending,
         builder: (_, _) => const PendingApprovalScreen(),
