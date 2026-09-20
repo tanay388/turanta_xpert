@@ -3,144 +3,32 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/i18n/context_t.dart';
 import '../../../../core/theme/xpert_tokens.dart';
+import '../../../../core/utils/rupees.dart';
 import '../../data/referral_api.dart';
 
-/// The four states an invite passes through, in order.
+/// One friend who joined, and how close they are to paying out.
 ///
-/// This is the one place a numbered rail is honestly earned: referral status
-/// really is a sequence, and the whole reason a partner opens this screen is
-/// to ask how far along a friend is. It used to be a bare caption — "2 steps
-/// to earn" — with nothing showing where those steps sat in the journey.
-const _stages = ['INVITED', 'SIGNED_UP', 'ACTIVE', 'REWARDED'];
-
-int stageIndexOf(String status) {
-  final index = _stages.indexOf(status);
-  return index < 0 ? 0 : index;
-}
-
-class ReferralFunnel extends ConsumerWidget {
-  const ReferralFunnel({
-    super.key,
-    required this.status,
-    this.lapsed = false,
-  });
-
-  final String status;
-  final bool lapsed;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final reached = lapsed ? -1 : stageIndexOf(status);
-    final done = lapsed ? XpertColors.muted : XpertColors.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            for (var i = 0; i < _stages.length; i++) ...[
-              if (i > 0)
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: i <= reached
-                        ? done
-                        : XpertColors.border.withValues(alpha: 0.5),
-                  ),
-                ),
-              _Node(filled: i <= reached, color: done, last: i == _stages.length - 1),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            for (var i = 0; i < _stages.length; i++)
-              Expanded(
-                child: Text(
-                  ref.t('referral.status.${_stages[i].toLowerCase()}'),
-                  textAlign: i == 0
-                      ? TextAlign.start
-                      : i == _stages.length - 1
-                      ? TextAlign.end
-                      : TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: i == reached ? FontWeight.w800 : FontWeight.w500,
-                    color: i <= reached ? XpertColors.onSurface : XpertColors.muted,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Node extends StatelessWidget {
-  const _Node({required this.filled, required this.color, required this.last});
-
-  final bool filled;
-  final Color color;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    // The last node is the payout, so it is drawn a size larger — the rail
-    // should read as heading somewhere, not as four equal dots.
-    final size = last ? 14.0 : 10.0;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: filled ? color : XpertColors.surface,
-        border: Border.all(
-          color: filled ? color : XpertColors.border.withValues(alpha: 0.7),
-          width: 2,
-        ),
-      ),
-      child: last && filled
-          ? const Icon(Icons.check_rounded, size: 8, color: Colors.white)
-          : null,
-    );
-  }
-}
-
-/// One invited friend.
+/// The old card drew a four-node funnel of internal statuses. A partner does
+/// not think in INVITED → SIGNED_UP → ACTIVE → REWARDED; they think "how many
+/// more jobs until I get paid", so that is the whole card now.
 class ReferralInviteCard extends ConsumerWidget {
-  const ReferralInviteCard({
-    super.key,
-    required this.item,
-    required this.milestoneJobs,
-    required this.onRemind,
-  });
+  const ReferralInviteCard({super.key, required this.item});
 
   final ReferralInvite item;
-  final int milestoneJobs;
-  final VoidCallback onRemind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name = item.refereeDisplayName?.trim();
-    final title = (name == null || name.isEmpty)
-        ? ref.t('referral.invite_pending')
-        : name;
-    final remaining = (milestoneJobs - item.stepsCompleted).clamp(
-      0,
-      milestoneJobs,
-    );
+    final name =
+        item.refereeDisplayName?.trim().isNotEmpty == true
+        ? item.refereeDisplayName!.trim()
+        : ref.t('referral.friend.unnamed');
 
     return Container(
       padding: const EdgeInsets.all(XpertSpacing.md),
       decoration: BoxDecoration(
         color: XpertColors.surface,
         borderRadius: BorderRadius.circular(XpertRadius.lg),
-        border: Border.all(color: XpertColors.border.withValues(alpha: 0.45)),
+        border: Border.all(color: XpertColors.border.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,82 +36,76 @@ class ReferralInviteCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: XpertTypography.label.copyWith(fontSize: 15),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (item.serviceName != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        item.serviceName!,
-                        style: XpertTypography.caption.copyWith(fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: XpertTypography.label.copyWith(fontSize: 15),
                 ),
               ),
-              // Paid out is the only outcome worth a number on this card.
-              if (item.isRewarded)
-                Text(
-                  '₹${item.rewardAmount.toStringAsFixed(0)}',
-                  style: XpertTypography.metric.copyWith(
-                    fontSize: 17,
-                    color: XpertColors.success,
-                  ),
-                ),
+              const SizedBox(width: XpertSpacing.sm),
+              _RewardChip(amount: item.rewardAmount, paid: item.paid),
             ],
           ),
-          const SizedBox(height: XpertSpacing.md),
-          ReferralFunnel(status: item.status, lapsed: item.isLapsed),
-          if (item.isActive && remaining > 0) ...[
-            const SizedBox(height: XpertSpacing.md),
-            Text(
-              ref.t('referral.jobs_to_go', {
-                'count': '$remaining',
-                'amount': item.rewardAmount.toStringAsFixed(0),
-              }),
-              style: XpertTypography.caption.copyWith(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: XpertColors.onSurface,
+          const SizedBox(height: XpertSpacing.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(XpertRadius.pill),
+            child: LinearProgressIndicator(
+              value: item.paid ? 1 : item.progress,
+              minHeight: 8,
+              backgroundColor: XpertColors.heroCard,
+              valueColor: AlwaysStoppedAnimation(
+                item.paid ? XpertColors.success : XpertColors.heroAccent,
               ),
             ),
+          ),
+          const SizedBox(height: XpertSpacing.xs),
+          Text(
+            item.paid
+                ? ref.t('referral.friend.paid')
+                : ref.t('referral.friend.progress', {
+                    'done': '${item.jobsDone}',
+                    'total': '${item.jobsNeeded}',
+                  }),
+            style: XpertTypography.caption.copyWith(fontSize: 12.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardChip extends StatelessWidget {
+  const _RewardChip({required this.amount, required this.paid});
+
+  final double amount;
+  final bool paid;
+
+  @override
+  Widget build(BuildContext context) {
+    final colour = paid ? XpertColors.success : XpertColors.muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: XpertSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: paid
+            ? XpertColors.success.withValues(alpha: 0.10)
+            : XpertColors.background,
+        borderRadius: BorderRadius.circular(XpertRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (paid) ...[
+            Icon(Icons.check_rounded, size: 14, color: colour),
+            const SizedBox(width: 3),
           ],
-          if (item.isInvited || item.isSignedUp) ...[
-            const SizedBox(height: XpertSpacing.sm),
-            // A nudge, not a second primary action — the screen already has
-            // one filled button and it is Invite a friend.
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onRemind,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: XpertSpacing.sm,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: XpertColors.primary,
-                ),
-                icon: const Icon(Icons.send_rounded, size: 15),
-                label: Text(
-                  ref.t('referral.remind'),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          Text(
+            rupees(amount),
+            style: XpertTypography.label.copyWith(fontSize: 13, color: colour),
+          ),
         ],
       ),
     );

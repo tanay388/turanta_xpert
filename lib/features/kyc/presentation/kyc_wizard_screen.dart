@@ -13,6 +13,8 @@ import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../auth/presentation/widgets/auth_text_field.dart';
+import '../../referral/data/referral_api.dart';
+import '../../../core/utils/rupees.dart';
 import 'widgets/kyc_chrome.dart';
 import 'widgets/kyc_inputs.dart';
 
@@ -57,6 +59,45 @@ class KycWizardScreen extends HookConsumerWidget {
     final holderName = useTextEditingController();
     final uan = useTextEditingController();
     final gst = useTextEditingController();
+
+    // A referral code applied at sign-in is confirmed here, on the first
+    // screen a new partner actually lands on. Saying nothing is what made the
+    // old flow feel broken even when the code had worked.
+    final referralNotice = ref.watch(referralNoticeProvider);
+    final offer = ref.watch(referralOfferProvider);
+    useEffect(() {
+      if (referralNotice == null) return null;
+      final applied = referralNotice.referralApplied == true;
+      final name = referralNotice.referredByName;
+      final reward = offer.valueOrNull;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+              backgroundColor: applied
+                  ? XpertColors.success
+                  : XpertColors.danger,
+              content: Text(
+                !applied
+                    ? ref.t('login.referral.not_applied')
+                    : (name != null && reward != null
+                          ? ref.t('login.referral.applied', {
+                              'name': name,
+                              'amount': rupees(reward.refereeAmount),
+                              'jobs': '${reward.refereeJobs}',
+                            })
+                          : ref.t('login.referral.applied_generic')),
+              ),
+            ),
+          );
+        ref.read(referralNoticeProvider.notifier).state = null;
+      });
+      return null;
+    }, [referralNotice, offer]);
 
     final stepNames = [
       ref.t('kyc.step.personal'),

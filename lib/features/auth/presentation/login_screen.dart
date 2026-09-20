@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -6,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
+import '../../referral/data/referral_api.dart';
 import 'auth_controller.dart';
 import 'otp_controller.dart';
 import 'widgets/auth_legal_consent.dart';
@@ -29,6 +32,47 @@ class LoginScreen extends HookConsumerWidget {
     final referralFocus = useFocusNode();
     final showReferral = useState(false);
     final isBusy = state is OtpSending;
+
+    // Check the code while it is typed: a partner should never send an OTP,
+    // sign up, and only then discover the code was a typo — which, until now,
+    // nothing anywhere told them.
+    final codeCheck = useState<ReferralCodeCheck?>(null);
+    final codeChecking = useState(false);
+    useEffect(() {
+      Timer? debounce;
+      void onChanged() {
+        final code = referralCode.text.trim().toUpperCase();
+        debounce?.cancel();
+        if (code.length < 6) {
+          codeChecking.value = false;
+          codeCheck.value = null;
+          return;
+        }
+        codeChecking.value = true;
+        codeCheck.value = null;
+        debounce = Timer(const Duration(milliseconds: 350), () async {
+          try {
+            final result = await ref
+                .read(referralApiProvider)
+                .checkCode(code);
+            if (referralCode.text.trim().toUpperCase() != code) return;
+            codeChecking.value = false;
+            codeCheck.value = result;
+          } catch (_) {
+            // Offline or API down: stay quiet and let the server decide at
+            // signup rather than blocking sign-in over a nicety.
+            codeChecking.value = false;
+            codeCheck.value = null;
+          }
+        });
+      }
+
+      referralCode.addListener(onChanged);
+      return () {
+        debounce?.cancel();
+        referralCode.removeListener(onChanged);
+      };
+    }, [referralCode]);
 
     final rejection = ref.watch(authRejectionProvider);
     useEffect(() {
@@ -124,7 +168,7 @@ class LoginScreen extends HookConsumerWidget {
           // Optional, and only ever relevant on a partner's very first
           // sign-in — so it asks to be opened rather than sitting next to the
           // phone number competing for attention on every subsequent one.
-          if (showReferral.value)
+          if (showReferral.value) ...[
             AuthTextField(
               label: ref.t('login.referral.label'),
               controller: referralCode,
@@ -133,8 +177,48 @@ class LoginScreen extends HookConsumerWidget {
               enabled: !isBusy,
               textCapitalization: TextCapitalization.characters,
               textInputAction: TextInputAction.done,
+              inputFormatters: [_UpperCaseCode()],
+              errorText: codeCheck.value?.valid == false
+                  ? ref.t('login.referral.invalid')
+                  : null,
               onSubmitted: (_) => sendCode(),
-            )
+            ),
+            if (codeChecking.value || codeCheck.value?.valid == true)
+              Padding(
+                padding: const EdgeInsets.only(top: XpertSpacing.xs),
+                child: Row(
+                  children: [
+                    Icon(
+                      codeChecking.value
+                          ? Icons.hourglass_empty_rounded
+                          : Icons.check_circle_rounded,
+                      size: 16,
+                      color: codeChecking.value
+                          ? XpertColors.muted
+                          : XpertColors.success,
+                    ),
+                    const SizedBox(width: XpertSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        codeChecking.value
+                            ? ref.t('login.referral.checking')
+                            : (codeCheck.value?.referrerName == null
+                                  ? ref.t('login.referral.valid_generic')
+                                  : ref.t('login.referral.valid', {
+                                      'name': codeCheck.value!.referrerName!,
+                                    })),
+                        style: XpertTypography.caption.copyWith(
+                          fontSize: 12.5,
+                          color: codeChecking.value
+                              ? XpertColors.muted
+                              : XpertColors.success,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ]
           else
             Align(
               alignment: Alignment.centerLeft,
@@ -161,6 +245,24 @@ class LoginScreen extends HookConsumerWidget {
           const AuthLegalConsent(),
         ],
       ),
+    );
+  }
+}
+
+/// Codes are typed off a screenshot or dictated over a call, so spaces and
+/// lower case arrive constantly. Normalise as they type rather than rejecting.
+class _UpperCaseCode extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final cleaned = newValue.text
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    return TextEditingValue(
+      text: cleaned,
+      selection: TextSelection.collapsed(offset: cleaned.length),
     );
   }
 }

@@ -74,6 +74,8 @@ class PartnerUser {
     this.needsLegalAcceptance = false,
     this.whatsappOptIn = true,
     this.pushOptIn = true,
+    this.referralApplied,
+    this.referredByName,
   });
 
   final String id;
@@ -102,6 +104,11 @@ class PartnerUser {
   final bool whatsappOptIn;
   final bool pushOptIn;
 
+  /// Outcome of a referral code sent with this bootstrap call: null when none
+  /// was sent, true/false once the server has ruled on it.
+  final bool? referralApplied;
+  final String? referredByName;
+
   factory PartnerUser.fromJson(Map<String, dynamic> json) {
     final shiftJson = json['shift'];
     return PartnerUser(
@@ -127,6 +134,12 @@ class PartnerUser {
       needsLegalAcceptance: json['needsLegalAcceptance'] as bool? ?? false,
       whatsappOptIn: json['whatsappOptIn'] as bool? ?? true,
       pushOptIn: json['pushOptIn'] as bool? ?? true,
+      referralApplied: json['referral'] is Map<String, dynamic>
+          ? (json['referral']['applied'] as bool? ?? false)
+          : null,
+      referredByName: json['referral'] is Map<String, dynamic>
+          ? json['referral']['referrerName'] as String?
+          : null,
     );
   }
 

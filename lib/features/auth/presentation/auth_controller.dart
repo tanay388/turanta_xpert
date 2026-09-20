@@ -14,6 +14,11 @@ import '../data/partner_auth_api.dart';
 /// after.
 final pendingReferralCodeProvider = StateProvider<String?>((ref) => null);
 
+/// Set once the backend has ruled on a referral code, so the first screen the
+/// partner lands on can confirm it worked — silence is what made the old flow
+/// feel broken. Cleared by whoever shows it.
+final referralNoticeProvider = StateProvider<PartnerUser?>((ref) => null);
+
 /// Why a signed-in Firebase identity was rejected by the backend — a customer
 /// number used on Xpert, or an account bound to another handset. The session is
 /// torn down immediately in both cases, so this is the only surviving trace;
@@ -112,6 +117,9 @@ class AuthController extends AsyncNotifier<Session?> {
       // One-shot: only meant for this signup's first bootstrap call.
       if (referralCode != null) {
         ref.read(pendingReferralCodeProvider.notifier).state = null;
+        if (profile.referralApplied != null) {
+          ref.read(referralNoticeProvider.notifier).state = profile;
+        }
       }
       await ref
           .read(localeProvider.notifier)
