@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -139,6 +140,33 @@ String? partnerRedirect(PartnerGates gates, String loc) {
   return _Routes.gateScreens.contains(loc) ? _Routes.home : null;
 }
 
+/// A cross-fade with a breath of movement, for screens that share a backdrop.
+CustomTransitionPage<void> _fadeThrough(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    child: child,
+    transitionsBuilder: (context, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterRefresh(ref);
 
@@ -148,10 +176,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: kDebugMode,
     routes: [
       GoRoute(path: _Routes.splash, builder: (_, _) => const SplashScreen()),
-      GoRoute(path: _Routes.login, builder: (_, _) => const LoginScreen()),
+      // Sign-in and the code step are one flow on one canvas, so they
+      // cross-fade: a slide would throw the whole picture sideways to change
+      // what is written on the card.
+      GoRoute(
+        path: _Routes.login,
+        pageBuilder: (_, state) =>
+            _fadeThrough(state, const LoginScreen()),
+      ),
       GoRoute(
         path: _Routes.otp,
-        builder: (_, _) => const OtpVerificationScreen(),
+        pageBuilder: (_, state) =>
+            _fadeThrough(state, const OtpVerificationScreen()),
       ),
       GoRoute(
         path: _Routes.language,

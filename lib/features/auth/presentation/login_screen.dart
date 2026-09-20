@@ -11,10 +11,9 @@ import '../../../core/theme/xpert_tokens.dart';
 import '../../referral/data/referral_api.dart';
 import 'auth_controller.dart';
 import 'otp_controller.dart';
+import 'widgets/auth_inputs.dart';
 import 'widgets/auth_legal_consent.dart';
-import 'widgets/auth_primary_button.dart';
 import 'widgets/auth_shell.dart';
-import 'widgets/auth_text_field.dart';
 import 'widgets/auth_text_link.dart';
 
 class LoginScreen extends HookConsumerWidget {
@@ -52,9 +51,7 @@ class LoginScreen extends HookConsumerWidget {
         codeCheck.value = null;
         debounce = Timer(const Duration(milliseconds: 350), () async {
           try {
-            final result = await ref
-                .read(referralApiProvider)
-                .checkCode(code);
+            final result = await ref.read(referralApiProvider).checkCode(code);
             if (referralCode.text.trim().toUpperCase() != code) return;
             codeChecking.value = false;
             codeCheck.value = result;
@@ -123,105 +120,51 @@ class LoginScreen extends HookConsumerWidget {
       await controller.sendOtp(normalized);
     }
 
-    // Once the keyboard is up the sheet has roughly half the height and the
-    // partner is already typing, so the lines that explain the screen give way
-    // to the controls that finish it.
     final hasKeyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final checked = codeCheck.value;
 
     return AuthShell(
-      headline: Text(
-        ref.t('login.headline'),
-        style: XpertTypography.display,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            ref.t('login.welcome'),
-            style: XpertTypography.title.copyWith(fontSize: 22),
-          ),
-          if (!hasKeyboard) ...[
-            const SizedBox(height: XpertSpacing.xs),
-            Text(
-              ref.t('login.sheet.description'),
-              style: XpertTypography.caption.copyWith(fontSize: 14),
-            ),
-          ],
-          SizedBox(height: hasKeyboard ? XpertSpacing.lg : XpertSpacing.xl),
-          AuthTextField(
-            label: ref.t('login.phone.label'),
+          AuthPhoneField(
             controller: phone,
             focusNode: phoneFocus,
             hint: ref.t('login.phone.hint'),
-            errorText: phoneError.value,
             enabled: !isBusy,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => sendCode(),
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-            ],
-            prefix: const AuthPhonePrefix(),
+            errorText: phoneError.value,
+            onSubmitted: sendCode,
           ),
           const SizedBox(height: XpertSpacing.md),
-          // Optional, and only ever relevant on a partner's very first
-          // sign-in — so it asks to be opened rather than sitting next to the
-          // phone number competing for attention on every subsequent one.
+          // Optional, and only ever relevant on a partner's first sign-in, so
+          // it asks to be opened rather than sitting in the way of everyone
+          // else's.
           if (showReferral.value) ...[
-            AuthTextField(
-              label: ref.t('login.referral.label'),
+            _ReferralField(
               controller: referralCode,
               focusNode: referralFocus,
-              hint: ref.t('login.referral.hint'),
               enabled: !isBusy,
-              textCapitalization: TextCapitalization.characters,
-              textInputAction: TextInputAction.done,
-              inputFormatters: [_UpperCaseCode()],
-              errorText: codeCheck.value?.valid == false
+              label: ref.t('login.referral.label'),
+              hint: ref.t('login.referral.hint'),
+              errorText: checked?.valid == false
                   ? ref.t('login.referral.invalid')
                   : null,
-              onSubmitted: (_) => sendCode(),
+              note: codeChecking.value
+                  ? ref.t('login.referral.checking')
+                  : checked != null && checked.valid
+                  ? (checked.referrerName == null
+                        ? ref.t('login.referral.valid_generic')
+                        : ref.t('login.referral.valid', {
+                            'name': checked.referrerName!,
+                          }))
+                  : null,
+              noteIsGood: !codeChecking.value,
+              onSubmitted: sendCode,
             ),
-            if (codeChecking.value || codeCheck.value?.valid == true)
-              Padding(
-                padding: const EdgeInsets.only(top: XpertSpacing.xs),
-                child: Row(
-                  children: [
-                    Icon(
-                      codeChecking.value
-                          ? Icons.hourglass_empty_rounded
-                          : Icons.check_circle_rounded,
-                      size: 16,
-                      color: codeChecking.value
-                          ? XpertColors.muted
-                          : XpertColors.success,
-                    ),
-                    const SizedBox(width: XpertSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        codeChecking.value
-                            ? ref.t('login.referral.checking')
-                            : (codeCheck.value?.referrerName == null
-                                  ? ref.t('login.referral.valid_generic')
-                                  : ref.t('login.referral.valid', {
-                                      'name': codeCheck.value!.referrerName!,
-                                    })),
-                        style: XpertTypography.caption.copyWith(
-                          fontSize: 12.5,
-                          color: codeChecking.value
-                              ? XpertColors.muted
-                              : XpertColors.success,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ]
-          else
+            const SizedBox(height: XpertSpacing.md),
+          ] else
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: AuthTextLink(
                 label: ref.t('login.referral.toggle'),
                 onTap: () {
@@ -232,16 +175,13 @@ class LoginScreen extends HookConsumerWidget {
                 },
               ),
             ),
-          SizedBox(height: hasKeyboard ? XpertSpacing.lg : XpertSpacing.xl),
-          AuthPrimaryButton(
+          const SizedBox(height: XpertSpacing.md),
+          AuthCta(
             label: ref.t('login.cta'),
             isLoading: isBusy,
             onPressed: sendCode,
           ),
-          // Directly under the control it qualifies — pressing the button is
-          // the act of agreeing, so the terms belong to the button, not to the
-          // bottom of the screen.
-          const SizedBox(height: XpertSpacing.md),
+          const SizedBox(height: XpertSpacing.sm),
           const AuthLegalConsent(),
         ],
       ),
@@ -249,17 +189,108 @@ class LoginScreen extends HookConsumerWidget {
   }
 }
 
+/// The referral code: same card, quieter than the number it sits under.
+class _ReferralField extends StatelessWidget {
+  const _ReferralField({
+    required this.controller,
+    required this.focusNode,
+    required this.enabled,
+    required this.label,
+    required this.hint,
+    required this.errorText,
+    required this.note,
+    required this.noteIsGood,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool enabled;
+  final String label;
+  final String hint;
+  final String? errorText;
+  final String? note;
+  final bool noteIsGood;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          focusNode: focusNode,
+          enabled: enabled,
+          textCapitalization: TextCapitalization.characters,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [UpperCaseCode()],
+          onSubmitted: (_) => onSubmitted(),
+          style: XpertTypography.label.copyWith(fontSize: 16, letterSpacing: 2),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            filled: true,
+            fillColor: XpertColors.background,
+            errorText: errorText,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(XpertRadius.lg),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(XpertRadius.lg),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(XpertRadius.lg),
+              borderSide: const BorderSide(
+                color: XpertColors.primaryDeep,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+        if (note != null) ...[
+          const SizedBox(height: XpertSpacing.xs),
+          Row(
+            children: [
+              Icon(
+                noteIsGood
+                    ? Icons.check_circle_rounded
+                    : Icons.hourglass_empty_rounded,
+                size: 15,
+                color: noteIsGood ? XpertColors.success : XpertColors.muted,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  note!,
+                  style: XpertTypography.caption.copyWith(
+                    fontSize: 12.5,
+                    color: noteIsGood ? XpertColors.success : XpertColors.muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 /// Codes are typed off a screenshot or dictated over a call, so spaces and
 /// lower case arrive constantly. Normalise as they type rather than rejecting.
-class _UpperCaseCode extends TextInputFormatter {
+class UpperCaseCode extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final cleaned = newValue.text
-        .toUpperCase()
-        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final cleaned = newValue.text.toUpperCase().replaceAll(
+      RegExp(r'[^A-Z0-9]'),
+      '',
+    );
     return TextEditingValue(
       text: cleaned,
       selection: TextSelection.collapsed(offset: cleaned.length),

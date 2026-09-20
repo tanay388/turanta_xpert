@@ -134,9 +134,7 @@ class AuthController extends AsyncNotifier<Session?> {
           ref.read(referralNoticeProvider.notifier).state = profile;
         }
       }
-      await ref
-          .read(localeProvider.notifier)
-          .syncFromProfile(profile.language);
+      await ref.read(localeProvider.notifier).syncFromProfile(profile.language);
       unawaited(_syncPushToken());
       return Session(firebaseUser: user, profile: profile);
     } on ApiException catch (e) {

@@ -40,9 +40,12 @@ class XpertMark extends StatelessWidget {
 /// from the customer one, and a partner installing both should be able to tell
 /// which they opened before reading anything else.
 class XpertMarkLockup extends StatefulWidget {
-  const XpertMarkLockup({super.key, this.markSize = 68});
+  const XpertMarkLockup({super.key, this.markSize = 68, this.onDark = false});
 
   final double markSize;
+
+  /// Flips the wordmark to white for the ink canvas.
+  final bool onDark;
 
   @override
   State<XpertMarkLockup> createState() => _XpertMarkLockupState();
@@ -107,10 +110,14 @@ class _XpertMarkLockupState extends State<XpertMarkLockup>
                 child: Text.rich(
                   TextSpan(
                     text: 'Turanta ',
-                    children: const [
+                    children: [
                       TextSpan(
                         text: 'Xpert',
-                        style: TextStyle(color: XpertColors.heroAccent),
+                        style: TextStyle(
+                          color: widget.onDark
+                              ? XpertColors.primary
+                              : XpertColors.heroAccent,
+                        ),
                       ),
                     ],
                     style: TextStyle(
@@ -118,7 +125,9 @@ class _XpertMarkLockupState extends State<XpertMarkLockup>
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.7,
                       height: 1,
-                      color: XpertColors.onSurface,
+                      color: widget.onDark
+                          ? Colors.white
+                          : XpertColors.onSurface,
                     ),
                   ),
                 ),

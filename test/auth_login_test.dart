@@ -8,9 +8,8 @@ import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
 import 'package:turanta_xpert/features/auth/presentation/login_screen.dart';
+import 'package:turanta_xpert/features/auth/presentation/widgets/auth_inputs.dart';
 import 'package:turanta_xpert/features/auth/presentation/widgets/auth_legal_consent.dart';
-import 'package:turanta_xpert/features/auth/presentation/widgets/auth_primary_button.dart';
-import 'package:turanta_xpert/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:turanta_xpert/features/legal/data/legal_document_api.dart';
 
 const _screen = Size(360, 800);
@@ -85,18 +84,17 @@ Future<void> _pumpLogin(
   await tester.pumpAndSettle();
 }
 
-/// The white sheet — identified by its top-only 32px corner radius, which
+/// The white card the form sits on — identified by its 28px radius, which
 /// nothing else in the auth tree uses.
-Finder _sheet() => find.byWidgetPredicate((w) {
+Finder _card() => find.byWidgetPredicate((w) {
   if (w is! Container) return false;
   final d = w.decoration;
   if (d is! BoxDecoration) return false;
-  return d.borderRadius ==
-      const BorderRadius.vertical(top: Radius.circular(32));
-}, description: 'auth sheet');
+  return d.borderRadius == BorderRadius.circular(28);
+}, description: 'auth card');
 
 void main() {
-  testWidgets('sheet sits on the screen bottom with no keyboard', (
+  testWidgets('the card sits near the bottom with no keyboard', (
     tester,
   ) async {
     tester.view.physicalSize = _screen;
@@ -105,22 +103,24 @@ void main() {
 
     await _pumpLogin(tester);
 
-    final rect = tester.getRect(_sheet().first);
-    expect(rect.bottom, moreOrLessEquals(_screen.height, epsilon: 0.5));
-    expect(rect.height, greaterThan(_screen.height * 0.5));
+    // It floats over the canvas rather than filling the bottom half, so it
+    // stops short of the screen edge on every side.
+    final rect = tester.getRect(_card().first);
+    expect(rect.bottom, lessThan(_screen.height));
+    expect(rect.left, greaterThan(0));
+    expect(rect.right, lessThan(_screen.width));
   });
 
-  testWidgets('sheet rises to sit on top of the keyboard', (tester) async {
+  testWidgets('the card rises to sit on top of the keyboard', (tester) async {
     tester.view.physicalSize = _screen;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
     await _pumpLogin(tester, keyboardInset: _keyboard);
 
-    final rect = tester.getRect(_sheet().first);
     expect(
-      rect.bottom,
-      moreOrLessEquals(_screen.height - _keyboard, epsilon: 0.5),
+      tester.getRect(_card().first).bottom,
+      lessThanOrEqualTo(_screen.height - _keyboard),
     );
   });
 
@@ -133,11 +133,11 @@ void main() {
 
     final limit = _screen.height - _keyboard;
     expect(
-      tester.getBottomLeft(find.byType(AuthTextField).first).dy,
+      tester.getBottomLeft(find.byType(AuthPhoneField)).dy,
       lessThanOrEqualTo(limit),
     );
     expect(
-      tester.getBottomLeft(find.byType(AuthPrimaryButton)).dy,
+      tester.getBottomLeft(find.byType(AuthCta)).dy,
       lessThanOrEqualTo(limit),
     );
   });
@@ -165,12 +165,13 @@ void main() {
 
     // Optional and first-sign-in-only, so it must not compete with the phone
     // number on every later sign-in.
-    expect(find.byType(AuthTextField), findsOneWidget);
+    expect(find.byType(AuthPhoneField), findsOneWidget);
+    expect(find.text('Referral code (optional)'), findsNothing);
 
     await tester.tap(find.text('Have a referral code?'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AuthTextField), findsNWidgets(2));
+    expect(find.text('Referral code (optional)'), findsOneWidget);
   });
 
   testWidgets('consent line links each document', (tester) async {
@@ -204,7 +205,7 @@ void main() {
     // convenience. A dropped request must not silently remove the sentence.
     expect(
       find.textContaining(
-        'By logging in you agree to our Terms & Conditions and Privacy Policy.',
+        'By continuing you agree to our Terms & Conditions and Privacy Policy.',
       ),
       findsOneWidget,
     );
