@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../app/router.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
@@ -88,9 +89,16 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
         'city': _city.text.trim(),
         'state': _state.text.trim(),
       });
-      // The gate reads the refreshed profile, so this is what moves them on.
       await ref.read(authProvider.notifier).refreshProfile();
-      if (mounted) context.go('/');
+      if (!mounted) return;
+      // Hand back to the gate chain rather than naming a screen: where they go
+      // next depends on whether they are approved, and only the gates know.
+      final session = ref.read(authProvider).valueOrNull;
+      if (session == null) {
+        context.go('/login');
+        return;
+      }
+      context.go(partnerDestination(PartnerGates.of(session)));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
