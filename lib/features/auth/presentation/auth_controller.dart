@@ -44,6 +44,14 @@ class Session {
     return profile != null && (profile.gender ?? '').isEmpty;
   }
 
+  /// Which hub a partner works out of, asked right after gender. Partners who
+  /// were assigned one by an admin never see it; those who joined before the
+  /// question existed are all inactive, so nobody at work is interrupted.
+  bool get needsHub {
+    final profile = this.profile;
+    return profile != null && profile.warehouseId == null;
+  }
+
   /// Defaults false: a partner whose profile has not loaded should not be
   /// pinned to the consent gate by a missing field.
   bool get needsLegalAcceptance => profile?.needsLegalAcceptance ?? false;

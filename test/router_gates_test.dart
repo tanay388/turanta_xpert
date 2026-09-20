@@ -4,6 +4,7 @@ import 'package:turanta_xpert/app/router.dart';
 PartnerGates gates({
   bool language = false,
   bool gender = false,
+  bool hub = false,
   bool legal = false,
   bool kyc = false,
   bool pending = false,
@@ -11,6 +12,7 @@ PartnerGates gates({
 }) => PartnerGates(
   needsLanguage: language,
   needsGender: gender,
+  needsHub: hub,
   needsLegalAcceptance: legal,
   needsKyc: kyc,
   isPendingApproval: pending,
@@ -30,6 +32,12 @@ void main() {
   test('gates are answered in order', () {
     expect(partnerDestination(gates(language: true, legal: true)), '/language');
     expect(partnerDestination(gates(gender: true, legal: true)), '/gender');
+    // Hub comes straight after gender, before consent and KYC.
+    expect(partnerDestination(gates(hub: true, legal: true)), '/hub-selection');
+    expect(
+      partnerDestination(gates(gender: true, hub: true)),
+      '/gender',
+    );
     expect(partnerDestination(gates(legal: true, kyc: true)), '/legal-consent');
     expect(partnerDestination(gates(kyc: true)), '/kyc');
     expect(partnerDestination(gates(pending: true)), '/pending-approval');
