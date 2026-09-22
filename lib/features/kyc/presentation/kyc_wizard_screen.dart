@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -11,8 +12,12 @@ import '../../../core/i18n/context_t.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import '../../auth/data/partner_auth_api.dart';
+import '../../address/presentation/widgets/address_fields.dart';
 import '../../auth/presentation/auth_controller.dart';
+import 'kyc_draft.dart';
 import '../../auth/presentation/widgets/auth_text_field.dart';
+import '../../referral/data/referral_api.dart';
+import '../../../core/utils/rupees.dart';
 import 'widgets/kyc_chrome.dart';
 import 'widgets/kyc_inputs.dart';
 
@@ -26,16 +31,46 @@ import 'widgets/kyc_inputs.dart';
 /// The one field the API accepts that this wizard never collected is GST — it
 /// was declared on the DTO, stored on the entity and displayed on Financial
 /// details, where it could only ever read "—".
+///
+/// Kept in the order the choices are offered; mirrors the backend enum.
+const _relations = ['self', 'mother', 'father', 'spouse', 'child'];
+
+/// The wizard's steps, in order.
+///
+/// These used to be a bare `static const _steps = 6` with three structures
+/// keyed by index — the names, the validators, the bodies — and a review step
+/// reached through `default:`. Inserting a step silently repointed every
+/// hardcoded jump on the review screen, so the order lives here now and
+/// nothing counts positions by hand.
+enum KycStep { personal, address, aadhaar, pan, selfie, bank, review }
+
+extension KycStepX on KycStep {
+  bool get isLast => index == KycStep.values.length - 1;
+  bool get isFirst => index == 0;
+  KycStep get next => KycStep.values[index + 1];
+  KycStep get previous => KycStep.values[index - 1];
+}
+
 class KycWizardScreen extends HookConsumerWidget {
   const KycWizardScreen({super.key});
 
-  static const _steps = 6;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final step = useState(0);
+    final step = useState(KycStep.personal);
     final busy = useState(false);
     final error = useState<String?>(null);
+    final scroll = useScrollController();
+
+    /// Which way the next transition should slide.
+    final goingBack = useState(false);
+
+    // A short step after a long one used to leave you scrolled halfway down a
+    // screen you had not read: the scroll view keeps its offset across a
+    // rebuild, and only the content changed.
+    useEffect(() {
+      if (scroll.hasClients) scroll.jumpTo(0);
+      return null;
+    }, [step.value]);
 
     final fullName = useTextEditingController();
     final dob = useState<DateTime?>(null);
@@ -50,6 +85,16 @@ class KycWizardScreen extends HookConsumerWidget {
     // directly — keep the short-lived signed preview links separately, keyed
     // by the stored key.
     final previews = useState<Map<String, String>>(const {});
+    final line1 = useTextEditingController();
+    final line2 = useTextEditingController();
+    final landmark = useTextEditingController();
+    final city = useTextEditingController();
+    final stateName = useTextEditingController();
+    final pincode = useTextEditingController();
+    final pin = useState<LatLng?>(null);
+    final formatted = useState<String?>(null);
+    final relation = useState('self');
+    final passbook = useState<String?>(null);
     final account = useTextEditingController();
     final accountConfirm = useTextEditingController();
     final ifsc = useTextEditingController();
@@ -57,15 +102,139 @@ class KycWizardScreen extends HookConsumerWidget {
     final holderName = useTextEditingController();
     final uan = useTextEditingController();
     final gst = useTextEditingController();
+    final eshram = useTextEditingController();
 
-    final stepNames = [
-      ref.t('kyc.step.personal'),
-      ref.t('kyc.step.aadhaar'),
-      ref.t('kyc.step.pan'),
-      ref.t('kyc.step.selfie'),
-      ref.t('kyc.step.bank'),
-      ref.t('kyc.step.review'),
-    ];
+    final profile = ref.watch(authProvider).valueOrNull?.profile;
+    final uid = profile?.id;
+
+    useEffect(() {
+      if (uid == null) return null;
+      var cancelled = false;
+      () async {
+        final draft = await KycDraft.load(uid);
+        if (cancelled) return;
+        if (draft != null) {
+          fullName.text = draft['fullName'] ?? fullName.text;
+          aadhaarNumber.text = draft['aadhaarNumber'] ?? aadhaarNumber.text;
+          panNumber.text = draft['panNumber'] ?? panNumber.text;
+          line1.text = draft['addressLine1'] ?? line1.text;
+          line2.text = draft['addressLine2'] ?? line2.text;
+          landmark.text = draft['landmark'] ?? landmark.text;
+          city.text = draft['city'] ?? city.text;
+          stateName.text = draft['state'] ?? stateName.text;
+          pincode.text = draft['pincode'] ?? pincode.text;
+          final lat = double.tryParse(draft['latitude'] ?? '');
+          final lng = double.tryParse(draft['longitude'] ?? '');
+          if (lat != null && lng != null) pin.value = LatLng(lat, lng);
+          formatted.value = draft['formattedAddress'] ?? formatted.value;
+          account.text = draft['bankAccountNumber'] ?? account.text;
+          accountConfirm.text =
+              draft['bankAccountNumber'] ?? accountConfirm.text;
+          ifsc.text = draft['bankIfsc'] ?? ifsc.text;
+          bankName.text = draft['bankName'] ?? bankName.text;
+          holderName.text = draft['accountHolderName'] ?? holderName.text;
+          uan.text = draft['uanNumber'] ?? uan.text;
+          gst.text = draft['gstNumber'] ?? gst.text;
+          eshram.text = draft['eshramNumber'] ?? eshram.text;
+          relation.value = draft['accountHolderRelation'] ?? relation.value;
+          aadhaarFront.value ??= draft['aadhaarFrontUrl'];
+          aadhaarBack.value ??= draft['aadhaarBackUrl'];
+          panFront.value ??= draft['panFrontUrl'];
+          selfie.value ??= draft['selfieUrl'];
+          passbook.value ??= draft['passbookUrl'];
+          final savedDob = draft['dateOfBirth'];
+          if (savedDob != null) dob.value = DateTime.tryParse(savedDob);
+        }
+        // Two fields we can answer for them, from the hub they already chose.
+        if (city.text.isEmpty) city.text = profile?.hubCity ?? '';
+        if (stateName.text.isEmpty) stateName.text = profile?.hubState ?? '';
+      }();
+      return () => cancelled = true;
+    }, [uid]);
+
+    // Saved on every step change rather than every keystroke: the partner has
+    // just told us they are done with that step, and it keeps writes rare.
+    useEffect(() {
+      if (uid == null) return null;
+      KycDraft.save(uid, {
+        'fullName': fullName.text,
+        'dateOfBirth': dob.value?.toIso8601String(),
+        'aadhaarNumber': aadhaarNumber.text,
+        'panNumber': panNumber.text,
+        'addressLine1': line1.text,
+        'addressLine2': line2.text,
+        'landmark': landmark.text,
+        'city': city.text,
+        'state': stateName.text,
+        'pincode': pincode.text,
+        'latitude': pin.value?.latitude.toString(),
+        'longitude': pin.value?.longitude.toString(),
+        'formattedAddress': formatted.value,
+        'bankAccountNumber': account.text,
+        'bankIfsc': ifsc.text,
+        'bankName': bankName.text,
+        'accountHolderName': holderName.text,
+        'accountHolderRelation': relation.value,
+        'uanNumber': uan.text,
+        'gstNumber': gst.text,
+        'eshramNumber': eshram.text,
+        'aadhaarFrontUrl': aadhaarFront.value,
+        'aadhaarBackUrl': aadhaarBack.value,
+        'panFrontUrl': panFront.value,
+        'selfieUrl': selfie.value,
+        'passbookUrl': passbook.value,
+      });
+      return null;
+    }, [step.value]);
+
+    // A referral code applied at sign-in is confirmed here, on the first
+    // screen a new partner actually lands on. Saying nothing is what made the
+    // old flow feel broken even when the code had worked.
+    final referralNotice = ref.watch(referralNoticeProvider);
+    final offer = ref.watch(referralOfferProvider);
+    useEffect(() {
+      if (referralNotice == null) return null;
+      final applied = referralNotice.referralApplied == true;
+      final name = referralNotice.referredByName;
+      final reward = offer.valueOrNull;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+              backgroundColor: applied
+                  ? XpertColors.success
+                  : XpertColors.danger,
+              content: Text(
+                !applied
+                    ? ref.t('login.referral.not_applied')
+                    : (name != null && reward != null
+                          ? ref.t('login.referral.applied', {
+                              'name': name,
+                              'amount': rupees(reward.refereeAmount),
+                              'jobs': '${reward.refereeJobs}',
+                            })
+                          : ref.t('login.referral.applied_generic')),
+              ),
+            ),
+          );
+        ref.read(referralNoticeProvider.notifier).state = null;
+      });
+      return null;
+    }, [referralNotice, offer]);
+
+    String stepName(KycStep which) => switch (which) {
+      KycStep.personal => ref.t('kyc.step.personal'),
+      KycStep.address => ref.t('kyc.step.address'),
+      KycStep.aadhaar => ref.t('kyc.step.aadhaar'),
+      KycStep.pan => ref.t('kyc.step.pan'),
+      KycStep.selfie => ref.t('kyc.step.selfie'),
+      KycStep.bank => ref.t('kyc.step.bank'),
+      KycStep.review => ref.t('kyc.step.review'),
+    };
 
     Future<void> pickAndUpload(ValueNotifier<String?> target) async {
       final picker = ImagePicker();
@@ -129,10 +298,10 @@ class KycWizardScreen extends HookConsumerWidget {
       }
     }
 
-    bool validate(int which) {
+    bool validate(KycStep which) {
       error.value = null;
       switch (which) {
-        case 0:
+        case KycStep.personal:
           if (fullName.text.trim().length < 2) {
             error.value = ref.t('kyc.error.name_required');
             return false;
@@ -142,7 +311,33 @@ class KycWizardScreen extends HookConsumerWidget {
             return false;
           }
           return true;
-        case 1:
+        case KycStep.address:
+          if (line1.text.trim().length < 2) {
+            error.value = ref.t('kyc.error.line1_required');
+            return false;
+          }
+          if (line2.text.trim().length < 2) {
+            error.value = ref.t('kyc.error.line2_required');
+            return false;
+          }
+          if (!KycInputs.pincodePattern.hasMatch(pincode.text.trim())) {
+            error.value = ref.t('kyc.error.pincode_invalid');
+            return false;
+          }
+          if (city.text.trim().length < 2) {
+            error.value = ref.t('kyc.error.city_required');
+            return false;
+          }
+          if (stateName.text.trim().length < 2) {
+            error.value = ref.t('kyc.error.state_required');
+            return false;
+          }
+          if (pin.value == null) {
+            error.value = ref.t('kyc.error.pin_required');
+            return false;
+          }
+          return true;
+        case KycStep.aadhaar:
           if (aadhaarFront.value == null || aadhaarBack.value == null) {
             error.value = ref.t('kyc.error.aadhaar_photos_required');
             return false;
@@ -152,7 +347,7 @@ class KycWizardScreen extends HookConsumerWidget {
             return false;
           }
           return true;
-        case 2:
+        case KycStep.pan:
           // A partner without a PAN must still be able to finish onboarding.
           if (!hasPan.value) return true;
           if (panFront.value == null) {
@@ -165,13 +360,13 @@ class KycWizardScreen extends HookConsumerWidget {
             return false;
           }
           return true;
-        case 3:
+        case KycStep.selfie:
           if (selfie.value == null) {
             error.value = ref.t('kyc.error.selfie_required');
             return false;
           }
           return true;
-        case 4:
+        case KycStep.bank:
           if (account.text.trim().length < 8) {
             error.value = ref.t('kyc.error.account_invalid');
             return false;
@@ -204,8 +399,13 @@ class KycWizardScreen extends HookConsumerWidget {
             error.value = ref.t('kyc.error.uan_invalid');
             return false;
           }
+          final eshramValue = eshram.text.trim();
+          if (eshramValue.isNotEmpty && eshramValue.length != 12) {
+            error.value = ref.t('kyc.error.eshram_invalid');
+            return false;
+          }
           return true;
-        default:
+        case KycStep.review:
           return true;
       }
     }
@@ -213,9 +413,10 @@ class KycWizardScreen extends HookConsumerWidget {
     Future<void> submit() async {
       // Every step is re-checked, not just the last one — a partner can jump
       // back from review, clear a field and return without passing through.
-      for (var i = 0; i < _steps - 1; i++) {
-        if (!validate(i)) {
-          step.value = i;
+      for (final which in KycStep.values) {
+        if (which == KycStep.review) continue;
+        if (!validate(which)) {
+          step.value = which;
           return;
         }
       }
@@ -237,10 +438,23 @@ class KycWizardScreen extends HookConsumerWidget {
           'bankIfsc': ifsc.text.trim(),
           'bankName': bankName.text.trim(),
           'accountHolderName': holderName.text.trim(),
+          'accountHolderRelation': relation.value,
+          if (passbook.value != null) 'passbookUrl': passbook.value,
+          'addressLine1': line1.text.trim(),
+          'addressLine2': line2.text.trim(),
+          if (landmark.text.trim().isNotEmpty) 'landmark': landmark.text.trim(),
+          'city': city.text.trim(),
+          'state': stateName.text.trim(),
+          'pincode': pincode.text.trim(),
+          'latitude': pin.value?.latitude,
+          'longitude': pin.value?.longitude,
+          if (formatted.value != null) 'formattedAddress': formatted.value,
           if (uan.text.trim().isNotEmpty) 'uanNumber': uan.text.trim(),
           if (gst.text.trim().isNotEmpty) 'gstNumber': gst.text.trim(),
+          if (eshram.text.trim().isNotEmpty) 'eshramNumber': eshram.text.trim(),
           'submit': true,
         });
+        if (uid != null) await KycDraft.clear(uid);
         await ref.read(authProvider.notifier).refreshProfile();
         if (context.mounted) context.go('/pending-approval');
       } on ApiException catch (e) {
@@ -252,8 +466,9 @@ class KycWizardScreen extends HookConsumerWidget {
 
     Future<void> next() async {
       if (!validate(step.value)) return;
-      if (step.value < _steps - 1) {
-        step.value += 1;
+      if (!step.value.isLast) {
+        goingBack.value = false;
+        step.value = step.value.next;
       } else {
         await submit();
       }
@@ -287,7 +502,7 @@ class KycWizardScreen extends HookConsumerWidget {
 
     Widget body() {
       switch (step.value) {
-        case 0:
+        case KycStep.personal:
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -307,7 +522,31 @@ class KycWizardScreen extends HookConsumerWidget {
               ),
             ],
           );
-        case 1:
+        case KycStep.address:
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Intro(text: ref.t('kyc.intro.address')),
+              AddressFields(
+                line1: line1,
+                line2: line2,
+                landmark: landmark,
+                pincode: pincode,
+                city: city,
+                state: stateName,
+                pin: pin.value,
+                formattedAddress: formatted.value,
+                onPinChanged: (next, line) {
+                  pin.value = next;
+                  // Replaced, never merged: keeping the previous line would
+                  // show the old address against a pin somewhere else.
+                  formatted.value = line;
+                },
+                enabled: !busy.value,
+              ),
+            ],
+          );
+        case KycStep.aadhaar:
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -340,7 +579,7 @@ class KycWizardScreen extends HookConsumerWidget {
               ),
             ],
           );
-        case 2:
+        case KycStep.pan:
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -380,7 +619,7 @@ class KycWizardScreen extends HookConsumerWidget {
               ],
             ],
           );
-        case 3:
+        case KycStep.selfie:
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -395,7 +634,7 @@ class KycWizardScreen extends HookConsumerWidget {
               ),
             ],
           );
-        case 4:
+        case KycStep.bank:
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -442,9 +681,40 @@ class KycWizardScreen extends HookConsumerWidget {
                 enabled: !busy.value,
                 textCapitalization: TextCapitalization.words,
               ),
+              const SizedBox(height: XpertSpacing.lg),
+              SectionLabel(ref.t('kyc.field.relationship')),
+              const SizedBox(height: XpertSpacing.sm),
+              KycChoiceRow(
+                options: [
+                  for (final key in _relations)
+                    KycChoice(
+                      value: key,
+                      label: ref.t('kyc.relationship.$key'),
+                    ),
+                ],
+                selected: relation.value,
+                enabled: !busy.value,
+                onSelect: (picked) {
+                  relation.value = picked;
+                  // Their own account is nearly always in their own name, and
+                  // it is the name we already asked for on the first step.
+                  if (picked == 'self' && holderName.text.trim().isEmpty) {
+                    holderName.text = fullName.text.trim();
+                  }
+                },
+              ),
               const SizedBox(height: XpertSpacing.xl),
               SectionLabel(ref.t('kyc.section.optional')),
               const SizedBox(height: XpertSpacing.sm),
+              KycDocTile(
+                label: ref.t('kyc.doc.passbook'),
+                hint: ref.t('kyc.doc.passbook_hint'),
+                storageKey: passbook.value,
+                previewUrl: previews.value[passbook.value],
+                enabled: !busy.value,
+                onTap: () => pickAndUpload(passbook),
+              ),
+              const SizedBox(height: XpertSpacing.md),
               AuthTextField(
                 label: ref.t('kyc.field.uan'),
                 controller: uan,
@@ -463,9 +733,18 @@ class KycWizardScreen extends HookConsumerWidget {
                 textCapitalization: TextCapitalization.characters,
                 inputFormatters: KycInputs.gst,
               ),
+              const SizedBox(height: XpertSpacing.md),
+              AuthTextField(
+                label: ref.t('kyc.field.eshram'),
+                controller: eshram,
+                hint: ref.t('kyc.field.eshram_hint'),
+                enabled: !busy.value,
+                keyboardType: TextInputType.number,
+                inputFormatters: KycInputs.eshram,
+              ),
             ],
           );
-        default:
+        case KycStep.review:
           final docsOk =
               aadhaarFront.value != null &&
               aadhaarBack.value != null &&
@@ -479,7 +758,7 @@ class KycWizardScreen extends HookConsumerWidget {
                   KycReviewRow(
                     label: ref.t('kyc.field.full_name'),
                     value: _orDash(fullName.text.trim()),
-                    onEdit: () => step.value = 0,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.personal),
                     ok: fullName.text.trim().length >= 2,
                   ),
                   KycReviewRow(
@@ -487,13 +766,13 @@ class KycWizardScreen extends HookConsumerWidget {
                     value: dob.value == null
                         ? '—'
                         : DateFormat('dd MMM yyyy').format(dob.value!),
-                    onEdit: () => step.value = 0,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.personal),
                     ok: dob.value != null,
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.aadhaar_number'),
                     value: _orDash(aadhaarNumber.text.trim()),
-                    onEdit: () => step.value = 1,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.aadhaar),
                     ok: KycInputs.bare(aadhaarNumber.text).length == 12,
                   ),
                   KycReviewRow(
@@ -501,7 +780,7 @@ class KycWizardScreen extends HookConsumerWidget {
                     value: hasPan.value
                         ? _orDash(panNumber.text.trim())
                         : ref.t('kyc.pan.not_applicable'),
-                    onEdit: () => step.value = 2,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.pan),
                     ok:
                         !hasPan.value ||
                         KycInputs.panPattern.hasMatch(panNumber.text.trim()),
@@ -511,7 +790,7 @@ class KycWizardScreen extends HookConsumerWidget {
                     value: docsOk && selfie.value != null
                         ? ref.t('kyc.status.uploaded')
                         : ref.t('kyc.status.missing'),
-                    onEdit: () => step.value = 1,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.aadhaar),
                     ok: docsOk && selfie.value != null,
                   ),
                 ],
@@ -524,25 +803,25 @@ class KycWizardScreen extends HookConsumerWidget {
                   KycReviewRow(
                     label: ref.t('kyc.field.holder_name'),
                     value: _orDash(holderName.text.trim()),
-                    onEdit: () => step.value = 4,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.bank),
                     ok: holderName.text.trim().isNotEmpty,
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.account_number'),
                     value: _orDash(account.text.trim()),
-                    onEdit: () => step.value = 4,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.bank),
                     ok: account.text.trim().length >= 8,
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.ifsc'),
                     value: _orDash(ifsc.text.trim()),
-                    onEdit: () => step.value = 4,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.bank),
                     ok: KycInputs.ifscPattern.hasMatch(ifsc.text.trim()),
                   ),
                   KycReviewRow(
                     label: ref.t('kyc.field.bank_name'),
                     value: _orDash(bankName.text.trim()),
-                    onEdit: () => step.value = 4,
+                    onEdit: () => _jumpTo(step, goingBack, KycStep.bank),
                     ok: bankName.text.trim().isNotEmpty,
                   ),
                 ],
@@ -578,30 +857,57 @@ class KycWizardScreen extends HookConsumerWidget {
                 XpertSpacing.md,
               ),
               child: KycStepper(
-                step: step.value,
-                total: _steps,
-                label: stepNames[step.value],
+                step: step.value.index,
+                total: KycStep.values.length,
+                label: stepName(step.value),
               ),
             ),
             Expanded(
               child: SingleChildScrollView(
+                controller: scroll,
                 padding: const EdgeInsets.fromLTRB(
                   XpertSpacing.lg,
                   0,
                   XpertSpacing.lg,
                   XpertSpacing.lg,
                 ),
-                child: body(),
+                // Keyed by step so the switcher knows the content changed, and
+                // travelling backwards slides the other way.
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topCenter,
+                    children: [...previous, ?current],
+                  ),
+                  transitionBuilder: (child, animation) {
+                    final incoming = child.key == ValueKey(step.value);
+                    final from = goingBack.value ? -0.06 : 0.06;
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: Offset(incoming ? from : -from, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(key: ValueKey(step.value), child: body()),
+                ),
               ),
             ),
             _Footer(
               error: error.value,
               busy: busy.value,
-              canGoBack: step.value > 0,
-              isLast: step.value == _steps - 1,
+              canGoBack: !step.value.isFirst,
+              isLast: step.value.isLast,
               onBack: () {
                 error.value = null;
-                step.value -= 1;
+                goingBack.value = true;
+                step.value = step.value.previous;
               },
               onNext: next,
             ),
@@ -613,6 +919,17 @@ class KycWizardScreen extends HookConsumerWidget {
 }
 
 String _orDash(String value) => value.isEmpty ? '—' : value;
+
+/// Review's "edit" links travel backwards through the wizard, so the
+/// transition should slide that way too.
+void _jumpTo(
+  ValueNotifier<KycStep> step,
+  ValueNotifier<bool> goingBack,
+  KycStep target,
+) {
+  goingBack.value = target.index < step.value.index;
+  step.value = target;
+}
 
 /// One sentence at the top of a step saying why it is being asked for. The
 /// wizard previously asked for photographs of government ID with no

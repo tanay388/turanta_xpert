@@ -68,9 +68,13 @@ class SosApi {
   }
 
   Future<SosAlert> cancel(int id) async {
-    final res = await _dio.post<Map<String, dynamic>>('/partner/sos/$id/cancel');
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/partner/sos/$id/cancel',
+    );
     return SosAlert.fromJson(res.data ?? const {});
   }
 }
 
-final sosApiProvider = Provider<SosApi>((ref) => SosApi(ref.watch(dioProvider)));
+final sosApiProvider = Provider<SosApi>(
+  (ref) => SosApi(ref.watch(dioProvider)),
+);

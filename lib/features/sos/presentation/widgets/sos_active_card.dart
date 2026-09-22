@@ -72,7 +72,10 @@ class SosActiveCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: XpertTypography.label.copyWith(fontSize: 15)),
+                  Text(
+                    title,
+                    style: XpertTypography.label.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     body,

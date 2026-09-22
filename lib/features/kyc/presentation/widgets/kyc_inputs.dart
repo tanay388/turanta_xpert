@@ -41,7 +41,19 @@ class KycInputs {
     LengthLimitingTextInputFormatter(18),
   ];
 
+  /// Six digits, never starting with a zero.
+  static final pincode = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(6),
+  ];
+
   static final uan = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(12),
+  ];
+
+  /// The 12-digit UAN printed on an e-Shram card.
+  static final eshram = <TextInputFormatter>[
     FilteringTextInputFormatter.digitsOnly,
     LengthLimitingTextInputFormatter(12),
   ];
@@ -54,6 +66,7 @@ class KycInputs {
   ];
 
   static final panPattern = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
+  static final pincodePattern = RegExp(r'^[1-9][0-9]{5}$');
   static final ifscPattern = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
   static final gstPattern = RegExp(
     r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][Z][0-9A-Z]$',

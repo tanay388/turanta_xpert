@@ -44,10 +44,7 @@ class LeaveController extends Notifier<LeaveState> {
       final summary = await _api.getSummary();
       state = state.copyWith(summary: summary, isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: _message(e),
-      );
+      state = state.copyWith(isLoading: false, error: _message(e));
     }
   }
 
@@ -58,11 +55,7 @@ class LeaveController extends Notifier<LeaveState> {
   }) async {
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
-      await _api.apply(
-        startDate: startDate,
-        endDate: endDate,
-        reason: reason,
-      );
+      await _api.apply(startDate: startDate, endDate: endDate, reason: reason);
       await refresh();
       state = state.copyWith(isSubmitting: false);
       return true;
@@ -94,7 +87,8 @@ class LeaveController extends Notifier<LeaveState> {
           return message['message']?.toString() ?? message.toString();
         }
         if (message is String) return message;
-        if (message is List && message.isNotEmpty) return message.first.toString();
+        if (message is List && message.isNotEmpty)
+          return message.first.toString();
       }
       return e.message ?? 'Something went wrong';
     }

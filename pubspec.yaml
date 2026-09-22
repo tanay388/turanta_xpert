@@ -2,7 +2,7 @@ name: turanta_xpert
 description: "Turanta Xpert — partner app for check-in, jobs, and earnings."
 publish_to: "none"
 
-version: 2.0.0+4
+version: 2.1.0+5
 
 environment:
   sdk: ^3.10.7

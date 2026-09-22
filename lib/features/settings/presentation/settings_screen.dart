@@ -233,9 +233,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: Switch(
                   value: profile?.whatsappOptIn ?? true,
                   activeThumbColor: XpertColors.primary,
-                  onChanged: _savingPrefs
-                      ? null
-                      : (v) => _setPref(whatsapp: v),
+                  onChanged: _savingPrefs ? null : (v) => _setPref(whatsapp: v),
                 ),
               ),
               XpertListRow(

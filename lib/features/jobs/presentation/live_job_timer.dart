@@ -11,11 +11,7 @@ import '../data/jobs_api.dart';
 
 /// Live badge + remaining / elapsed clocks for an in-progress partner job.
 class LiveJobTimerCard extends ConsumerStatefulWidget {
-  const LiveJobTimerCard({
-    super.key,
-    required this.job,
-    this.compact = false,
-  });
+  const LiveJobTimerCard({super.key, required this.job, this.compact = false});
 
   final PartnerJob job;
   final bool compact;
@@ -70,8 +66,8 @@ class _LiveJobTimerCardState extends ConsumerState<LiveJobTimerCard> {
     final progress = overtime
         ? 1.0
         : (duration.inSeconds > 0
-            ? (elapsed.inSeconds / duration.inSeconds).clamp(0.0, 1.0)
-            : 0.0);
+              ? (elapsed.inSeconds / duration.inSeconds).clamp(0.0, 1.0)
+              : 0.0);
     final timeFmt = DateFormat('h:mm a');
 
     if (widget.compact) {

@@ -217,7 +217,9 @@ class CompletedJobCard extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      DateFormat('h:mm a').format(job.scheduledStartAt.toLocal()),
+                      DateFormat(
+                        'h:mm a',
+                      ).format(job.scheduledStartAt.toLocal()),
                       style: XpertTypography.caption.copyWith(fontSize: 12),
                     ),
                     if (noShow) ...[
@@ -293,8 +295,7 @@ class _CardShell extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: radius,
             border: Border.all(
-              color:
-                  borderColor ?? XpertColors.border.withValues(alpha: 0.45),
+              color: borderColor ?? XpertColors.border.withValues(alpha: 0.45),
             ),
           ),
           child: child,

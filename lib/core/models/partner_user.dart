@@ -72,8 +72,13 @@ class PartnerUser {
     this.kycStatus,
     this.kycComplete = false,
     this.needsLegalAcceptance = false,
+    this.needsAddress = false,
+    this.hubCity,
+    this.hubState,
     this.whatsappOptIn = true,
     this.pushOptIn = true,
+    this.referralApplied,
+    this.referredByName,
   });
 
   final String id;
@@ -99,8 +104,22 @@ class PartnerUser {
   /// True while any active legal document is unread or was replaced since the
   /// partner last accepted it.
   final bool needsLegalAcceptance;
+
+  /// True until a home address is on file. Partners approved before we asked
+  /// for one are sent to the address screen on their next app open.
+  final bool needsAddress;
+
+  /// City and state of the hub they work out of, offered as the default on the
+  /// address form — most helpers live where they work.
+  final String? hubCity;
+  final String? hubState;
   final bool whatsappOptIn;
   final bool pushOptIn;
+
+  /// Outcome of a referral code sent with this bootstrap call: null when none
+  /// was sent, true/false once the server has ruled on it.
+  final bool? referralApplied;
+  final String? referredByName;
 
   factory PartnerUser.fromJson(Map<String, dynamic> json) {
     final shiftJson = json['shift'];
@@ -125,8 +144,17 @@ class PartnerUser {
       kycStatus: kycStatusFromApi(json['kycStatus'] as String?),
       kycComplete: json['kycComplete'] as bool? ?? false,
       needsLegalAcceptance: json['needsLegalAcceptance'] as bool? ?? false,
+      needsAddress: json['needsAddress'] as bool? ?? false,
+      hubCity: json['hubCity'] as String?,
+      hubState: json['hubState'] as String?,
       whatsappOptIn: json['whatsappOptIn'] as bool? ?? true,
       pushOptIn: json['pushOptIn'] as bool? ?? true,
+      referralApplied: json['referral'] is Map<String, dynamic>
+          ? (json['referral']['applied'] as bool? ?? false)
+          : null,
+      referredByName: json['referral'] is Map<String, dynamic>
+          ? json['referral']['referrerName'] as String?
+          : null,
     );
   }
 

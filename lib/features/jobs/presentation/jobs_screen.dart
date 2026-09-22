@@ -271,8 +271,10 @@ List<_Row> _groupByDay(List<PartnerJob> jobs, WidgetRef ref) {
 
     if (currentDay == null || !DateUtils.isSameDay(currentDay, day)) {
       if (pendingIndex >= 0) {
-        rows[pendingIndex] =
-            _DayHeader((rows[pendingIndex] as _DayHeader).label, dayEarned);
+        rows[pendingIndex] = _DayHeader(
+          (rows[pendingIndex] as _DayHeader).label,
+          dayEarned,
+        );
       }
       currentDay = day;
       dayEarned = 0;
@@ -286,8 +288,10 @@ List<_Row> _groupByDay(List<PartnerJob> jobs, WidgetRef ref) {
 
   // The last day's total is only known once its jobs have all been counted.
   if (pendingIndex >= 0) {
-    rows[pendingIndex] =
-        _DayHeader((rows[pendingIndex] as _DayHeader).label, dayEarned);
+    rows[pendingIndex] = _DayHeader(
+      (rows[pendingIndex] as _DayHeader).label,
+      dayEarned,
+    );
   }
   return rows;
 }

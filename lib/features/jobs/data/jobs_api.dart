@@ -171,8 +171,8 @@ class PartnerJob {
           : null,
       reviewTags: review is Map<String, dynamic>
           ? ((review['tags'] as List<dynamic>?) ?? const [])
-              .map((e) => e.toString())
-              .toList()
+                .map((e) => e.toString())
+                .toList()
           : const [],
     );
   }
@@ -221,10 +221,7 @@ class JobsApi {
   Future<JobHistoryPage> history({int? cursor, int limit = 20}) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/partner/jobs/history',
-      queryParameters: {
-        'limit': limit,
-        if (cursor != null) 'cursor': cursor,
-      },
+      queryParameters: {'limit': limit, if (cursor != null) 'cursor': cursor},
     );
     final data = res.data ?? const {};
     final items = (data['items'] as List<dynamic>? ?? const [])

@@ -12,11 +12,7 @@ import '../data/sos_api.dart';
 enum SosPhase { idle, sending, sent, failed }
 
 class SosState {
-  const SosState({
-    this.phase = SosPhase.idle,
-    this.alert,
-    this.attempt = 0,
-  });
+  const SosState({this.phase = SosPhase.idle, this.alert, this.attempt = 0});
 
   final SosPhase phase;
   final SosAlert? alert;
@@ -25,7 +21,12 @@ class SosState {
   bool get isBusy => phase == SosPhase.sending;
   bool get hasOpenAlert => alert?.isOpen ?? false;
 
-  SosState copyWith({SosPhase? phase, SosAlert? alert, int? attempt, bool clearAlert = false}) {
+  SosState copyWith({
+    SosPhase? phase,
+    SosAlert? alert,
+    int? attempt,
+    bool clearAlert = false,
+  }) {
     return SosState(
       phase: phase ?? this.phase,
       alert: clearAlert ? null : (alert ?? this.alert),
@@ -100,7 +101,9 @@ class SosController extends Notifier<SosState> {
       final position = await ref
           .read(locationServiceProvider)
           .currentOrLastKnown();
-      final alert = await ref.read(sosApiProvider).raise(
+      final alert = await ref
+          .read(sosApiProvider)
+          .raise(
             latitude: position?.latitude,
             longitude: position?.longitude,
             accuracyMetres: position?.accuracy.round(),

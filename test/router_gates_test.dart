@@ -4,15 +4,19 @@ import 'package:turanta_xpert/app/router.dart';
 PartnerGates gates({
   bool language = false,
   bool gender = false,
+  bool hub = false,
   bool legal = false,
   bool kyc = false,
+  bool address = false,
   bool pending = false,
   bool canUseHome = true,
 }) => PartnerGates(
   needsLanguage: language,
   needsGender: gender,
+  needsHub: hub,
   needsLegalAcceptance: legal,
   needsKyc: kyc,
+  needsAddress: address,
   isPendingApproval: pending,
   canUseHome: canUseHome,
 );
@@ -30,8 +34,21 @@ void main() {
   test('gates are answered in order', () {
     expect(partnerDestination(gates(language: true, legal: true)), '/language');
     expect(partnerDestination(gates(gender: true, legal: true)), '/gender');
+    // Hub comes straight after gender, before consent and KYC.
+    expect(partnerDestination(gates(hub: true, legal: true)), '/hub-selection');
+    expect(
+      partnerDestination(gates(gender: true, hub: true)),
+      '/gender',
+    );
     expect(partnerDestination(gates(legal: true, kyc: true)), '/legal-consent');
     expect(partnerDestination(gates(kyc: true)), '/kyc');
+    expect(partnerDestination(gates(kyc: true, address: true)), '/kyc');
+    // Ahead of the pending gate on purpose: a partner waiting on approval is
+    // exactly who has to supply this, because it is what unblocks the review.
+    expect(
+      partnerDestination(gates(address: true, pending: true)),
+      '/address',
+    );
     expect(partnerDestination(gates(pending: true)), '/pending-approval');
     expect(partnerDestination(gates(canUseHome: false)), '/pending-approval');
     expect(partnerDestination(gates()), '/home');

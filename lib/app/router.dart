@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -7,8 +8,10 @@ import '../features/auth/presentation/update_required_screen.dart';
 import '../core/network/app_version_gate.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_verification_screen.dart';
+import '../features/address/presentation/address_screen.dart';
 import '../features/auth/presentation/pending_approval_screen.dart';
 import '../features/gender/presentation/gender_screen.dart';
+import '../features/hub/presentation/hub_selection_screen.dart';
 import '../features/home/presentation/attendance_history_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/hub/presentation/hub_screen.dart';
@@ -36,8 +39,10 @@ class _Routes {
   static const otp = '/otp';
   static const language = '/language';
   static const gender = '/gender';
+  static const hubSelection = '/hub-selection';
   static const legalConsent = '/legal-consent';
   static const kyc = '/kyc';
+  static const address = '/address';
   static const pending = '/pending-approval';
   static const home = '/home';
   static const leave = '/leave';
@@ -59,8 +64,10 @@ class _Routes {
   static const Set<String> gateScreens = {
     language,
     gender,
+    hubSelection,
     legalConsent,
     kyc,
+    address,
     pending,
   };
 
@@ -77,8 +84,10 @@ class PartnerGates {
   const PartnerGates({
     required this.needsLanguage,
     required this.needsGender,
+    required this.needsHub,
     required this.needsLegalAcceptance,
     required this.needsKyc,
+    required this.needsAddress,
     required this.isPendingApproval,
     required this.canUseHome,
   });
@@ -86,15 +95,19 @@ class PartnerGates {
   PartnerGates.of(Session session)
     : needsLanguage = session.needsLanguage,
       needsGender = session.needsGender,
+      needsHub = session.needsHub,
       needsLegalAcceptance = session.needsLegalAcceptance,
       needsKyc = session.needsKyc,
+      needsAddress = session.needsAddress,
       isPendingApproval = session.isPendingApproval,
       canUseHome = session.canUseHome;
 
   final bool needsLanguage;
   final bool needsGender;
+  final bool needsHub;
   final bool needsLegalAcceptance;
   final bool needsKyc;
+  final bool needsAddress;
   final bool isPendingApproval;
   final bool canUseHome;
 }
@@ -104,8 +117,13 @@ class PartnerGates {
 String partnerDestination(PartnerGates gates) {
   if (gates.needsLanguage) return _Routes.language;
   if (gates.needsGender) return _Routes.gender;
+  if (gates.needsHub) return _Routes.hubSelection;
   if (gates.needsLegalAcceptance) return _Routes.legalConsent;
   if (gates.needsKyc) return _Routes.kyc;
+  // Deliberately ahead of the pending gate: a partner waiting on approval is
+  // exactly who needs to supply this, because their file cannot be approved
+  // without it and the KYC itself is locked.
+  if (gates.needsAddress) return _Routes.address;
   if (gates.isPendingApproval || !gates.canUseHome) return _Routes.pending;
   return _Routes.home;
 }
@@ -122,6 +140,33 @@ String? partnerRedirect(PartnerGates gates, String loc) {
   return _Routes.gateScreens.contains(loc) ? _Routes.home : null;
 }
 
+/// A cross-fade with a breath of movement, for screens that share a backdrop.
+CustomTransitionPage<void> _fadeThrough(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    child: child,
+    transitionsBuilder: (context, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterRefresh(ref);
 
@@ -131,10 +176,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: kDebugMode,
     routes: [
       GoRoute(path: _Routes.splash, builder: (_, _) => const SplashScreen()),
-      GoRoute(path: _Routes.login, builder: (_, _) => const LoginScreen()),
+      // Sign-in and the code step are one flow on one canvas, so they
+      // cross-fade: a slide would throw the whole picture sideways to change
+      // what is written on the card.
+      GoRoute(
+        path: _Routes.login,
+        pageBuilder: (_, state) =>
+            _fadeThrough(state, const LoginScreen()),
+      ),
       GoRoute(
         path: _Routes.otp,
-        builder: (_, _) => const OtpVerificationScreen(),
+        pageBuilder: (_, state) =>
+            _fadeThrough(state, const OtpVerificationScreen()),
       ),
       GoRoute(
         path: _Routes.language,
@@ -142,10 +195,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: _Routes.gender, builder: (_, _) => const GenderScreen()),
       GoRoute(
+        path: _Routes.hubSelection,
+        builder: (_, _) => const HubSelectionScreen(),
+      ),
+      GoRoute(
         path: _Routes.legalConsent,
         builder: (_, _) => const LegalConsentScreen(),
       ),
       GoRoute(path: _Routes.kyc, builder: (_, _) => const KycWizardScreen()),
+      GoRoute(path: _Routes.address, builder: (_, _) => const AddressScreen()),
       GoRoute(
         path: _Routes.pending,
         builder: (_, _) => const PendingApprovalScreen(),
@@ -252,7 +310,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Force-update gate wins over everything.
       if (loc == '/update-required') return null;
-      if (ref.read(appVersionGateProvider).valueOrNull == false) {
+      if (ref.read(appVersionGateProvider).valueOrNull?.supported == false) {
         return '/update-required';
       }
 

@@ -340,13 +340,52 @@ void main() {
 
       expect(find.text('K7RM2P'), findsOneWidget);
 
-      // The old chip showed a copy icon and opened the share sheet instead.
       await tester.tap(find.byIcon(Icons.copy_rounded));
       await tester.pumpAndSettle();
       expect(copied, 'K7RM2P');
     });
 
-    testWidgets('each invite shows where it sits in the funnel', (
+    /// The complaint this redesign answers: nobody could tell what they got.
+    testWidgets('both sides of the offer are on screen', (tester) async {
+      await _pump(
+        tester,
+        const ReferralScreen(),
+        overrides: [
+          referralProvider.overrideWith(() => _FakeReferral(_referralState)),
+        ],
+      );
+
+      expect(find.text('You get'), findsOneWidget);
+      expect(find.text('₹6,000'), findsOneWidget);
+      expect(find.text('Your friend gets'), findsOneWidget);
+      expect(find.text('₹1,000'), findsOneWidget);
+      expect(find.textContaining('after they finish 10 jobs'), findsOneWidget);
+      expect(find.textContaining('after their first 5 jobs'), findsOneWidget);
+      // Where the money lands was the missing half of the explanation.
+      expect(find.textContaining('next payout'), findsOneWidget);
+    });
+
+    testWidgets('each friend shows how far from paying out they are', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const ReferralScreen(),
+        overrides: [
+          referralProvider.overrideWith(() => _FakeReferral(_referralState)),
+        ],
+        // The list sits below the offer and the explainer — the right order,
+        // since what you get comes before who has joined — so give the test
+        // a screen tall enough to hold both.
+        screenSize: const Size(390, 2000),
+      );
+
+      expect(find.byType(ReferralInviteCard), findsNWidgets(2));
+      expect(find.text('7 of 10 jobs done'), findsOneWidget);
+      expect(find.text('Paid into your payout'), findsOneWidget);
+    });
+
+    testWidgets('a partner who joined on a code sees their own bonus', (
       tester,
     ) async {
       await _pump(
@@ -357,9 +396,8 @@ void main() {
         ],
       );
 
-      expect(find.byType(ReferralFunnel), findsNWidgets(3));
-      expect(stageIndexOf('INVITED'), 0);
-      expect(stageIndexOf('REWARDED'), 3);
+      expect(find.textContaining('Your joining bonus'), findsOneWidget);
+      expect(find.text('2 of 5 jobs done'), findsOneWidget);
     });
 
     testWidgets('a pushed referral screen has a way back', (tester) async {
@@ -418,11 +456,14 @@ void main() {
                 summary: ReferralSummary(
                   code: 'K7RM2P',
                   shareLink: '',
-                  rewardAmount: 500,
-                  milestoneJobs: 10,
+                  enabled: true,
+                  referrerAmount: 6000,
+                  referrerJobs: 10,
+                  refereeAmount: 1000,
+                  refereeJobs: 5,
                   totalEarned: 0,
-                  active: [],
-                  lapsed: [],
+                  pendingAmount: 0,
+                  friends: [],
                 ),
               ),
             ),
@@ -440,33 +481,40 @@ void main() {
 const _referralState = ReferralState(
   summary: ReferralSummary(
     code: 'K7RM2P',
-    shareLink: 'https://turanta.app/r/K7RM2P',
-    rewardAmount: 500,
-    milestoneJobs: 10,
-    totalEarned: 1500,
-    active: [
+    shareLink: 'https://myturanta.com/r/K7RM2P',
+    enabled: true,
+    referrerAmount: 6000,
+    referrerJobs: 10,
+    refereeAmount: 1000,
+    refereeJobs: 5,
+    totalEarned: 6000,
+    pendingAmount: 6000,
+    joiningBonus: JoiningBonus(
+      amount: 1000,
+      jobsDone: 2,
+      jobsNeeded: 5,
+      paid: false,
+    ),
+    friends: [
       ReferralInvite(
         id: 1,
         refereeDisplayName: 'Ramesh Kumar',
         status: 'ACTIVE',
-        rewardAmount: 500,
-        stepsCompleted: 7,
+        rewardAmount: 6000,
+        jobsDone: 7,
+        jobsNeeded: 10,
+        paid: false,
       ),
       ReferralInvite(
         id: 2,
-        status: 'INVITED',
-        rewardAmount: 500,
-        stepsCompleted: 0,
-      ),
-      ReferralInvite(
-        id: 3,
         refereeDisplayName: 'Sunita Devi',
         status: 'REWARDED',
-        rewardAmount: 500,
-        stepsCompleted: 10,
+        rewardAmount: 6000,
+        jobsDone: 10,
+        jobsNeeded: 10,
+        paid: true,
       ),
     ],
-    lapsed: [],
   ),
 );
 

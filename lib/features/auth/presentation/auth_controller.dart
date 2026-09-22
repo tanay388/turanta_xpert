@@ -14,6 +14,11 @@ import '../data/partner_auth_api.dart';
 /// after.
 final pendingReferralCodeProvider = StateProvider<String?>((ref) => null);
 
+/// Set once the backend has ruled on a referral code, so the first screen the
+/// partner lands on can confirm it worked — silence is what made the old flow
+/// feel broken. Cleared by whoever shows it.
+final referralNoticeProvider = StateProvider<PartnerUser?>((ref) => null);
+
 /// Why a signed-in Firebase identity was rejected by the backend — a customer
 /// number used on Xpert, or an account bound to another handset. The session is
 /// torn down immediately in both cases, so this is the only surviving trace;
@@ -39,9 +44,22 @@ class Session {
     return profile != null && (profile.gender ?? '').isEmpty;
   }
 
+  /// Which hub a partner works out of, asked right after gender. Partners who
+  /// were assigned one by an admin never see it; those who joined before the
+  /// question existed are all inactive, so nobody at work is interrupted.
+  bool get needsHub {
+    final profile = this.profile;
+    return profile != null && profile.warehouseId == null;
+  }
+
   /// Defaults false: a partner whose profile has not loaded should not be
   /// pinned to the consent gate by a missing field.
   bool get needsLegalAcceptance => profile?.needsLegalAcceptance ?? false;
+
+  /// Asked of everyone without an address on file, whatever their KYC status —
+  /// including a partner waiting on approval, since the address is now the one
+  /// thing standing between them and it.
+  bool get needsAddress => profile?.needsAddress ?? false;
   bool get isPendingApproval =>
       profile?.isPendingApproval == true && (profile?.kycComplete ?? false);
   bool get canUseHome =>
@@ -112,10 +130,11 @@ class AuthController extends AsyncNotifier<Session?> {
       // One-shot: only meant for this signup's first bootstrap call.
       if (referralCode != null) {
         ref.read(pendingReferralCodeProvider.notifier).state = null;
+        if (profile.referralApplied != null) {
+          ref.read(referralNoticeProvider.notifier).state = profile;
+        }
       }
-      await ref
-          .read(localeProvider.notifier)
-          .syncFromProfile(profile.language);
+      await ref.read(localeProvider.notifier).syncFromProfile(profile.language);
       unawaited(_syncPushToken());
       return Session(firebaseUser: user, profile: profile);
     } on ApiException catch (e) {

@@ -112,6 +112,29 @@ Future<void> _upload(WidgetTester tester, String docLabel) async {
   await tester.pumpAndSettle();
 }
 
+/// The address step, which sits between personal details and the documents.
+Future<void> _fillAddress(WidgetTester tester) async {
+  await tester.enterText(_field('House / flat number'), 'B-404 Shiv Residency');
+  await tester.enterText(_field('Street / area'), 'Paud Road, Kothrud');
+  await tester.enterText(_field('Pincode'), '411038');
+  await tester.enterText(_field('City'), 'Pune');
+  await tester.enterText(_field('State'), 'Maharashtra');
+  await _dropPin(tester);
+  await _continue(tester);
+}
+
+/// Opens the map and confirms wherever the pin already sits.
+///
+/// The map itself is a platform view that never renders under `flutter test`,
+/// which is fine: the pin is at the camera's starting centre from the first
+/// frame, so confirming is meaningful without one.
+Future<void> _dropPin(WidgetTester tester) async {
+  await tester.tap(find.text('Mark your home on the map'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Confirm this location'));
+  await tester.pumpAndSettle();
+}
+
 /// Fills every step with valid input and lands on Review.
 Future<void> _fillToReview(WidgetTester tester) async {
   await tester.enterText(_field('Full name'), 'Tanay Deo');
@@ -120,6 +143,8 @@ Future<void> _fillToReview(WidgetTester tester) async {
   await tester.tap(find.text('OK'));
   await tester.pumpAndSettle();
   await _continue(tester);
+
+  await _fillAddress(tester);
 
   await _upload(tester, 'Aadhaar front');
   await _upload(tester, 'Aadhaar back');
@@ -171,7 +196,7 @@ void main() {
       await _pump(tester);
 
       // Progress used to be one unlabelled bar with no step count anywhere.
-      expect(find.text('Step 1 of 6'), findsOneWidget);
+      expect(find.text('Step 1 of 7'), findsOneWidget);
       expect(find.byType(KycStepper), findsOneWidget);
     });
 
@@ -189,7 +214,7 @@ void main() {
       await _continue(tester);
 
       expect(find.text('Enter your full name'), findsOneWidget);
-      expect(find.text('Step 1 of 6'), findsOneWidget);
+      expect(find.text('Step 1 of 7'), findsOneWidget);
     });
 
     testWidgets('leaving verification asks first', (tester) async {
@@ -210,6 +235,7 @@ void main() {
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
       await _continue(tester);
+      await _fillAddress(tester);
 
       expect(find.text('Uploaded — tap to retake'), findsNothing);
       await _upload(tester, 'Aadhaar front');
@@ -282,6 +308,106 @@ void main() {
       }
     });
 
+    testWidgets('will not move past the address without a pincode', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tester.enterText(_field('Full name'), 'Tanay Deo');
+      await tester.tap(find.text('Select date of birth'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await _continue(tester);
+
+      await tester.enterText(_field('House / flat number'), 'B-404');
+      await tester.enterText(_field('Street / area'), 'Paud Road');
+      await tester.enterText(_field('City'), 'Pune');
+      await tester.enterText(_field('State'), 'Maharashtra');
+      await _continue(tester);
+
+      expect(find.text('Enter a valid 6-digit pincode'), findsOneWidget);
+      expect(find.text('Step 2 of 7'), findsOneWidget);
+    });
+
+    testWidgets('will not leave the address step without a pin', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tester.enterText(_field('Full name'), 'Tanay Deo');
+      await tester.tap(find.text('Select date of birth'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await _continue(tester);
+
+      await tester.enterText(_field('House / flat number'), 'B-404');
+      await tester.enterText(_field('Street / area'), 'Paud Road');
+      await tester.enterText(_field('Pincode'), '411038');
+      await tester.enterText(_field('City'), 'Pune');
+      await tester.enterText(_field('State'), 'Maharashtra');
+      await _continue(tester);
+
+      // Typed text alone does not locate a house in a Kothrud lane, which is
+      // the whole reason the pin exists.
+      expect(find.text('Mark your home on the map'), findsWidgets);
+      expect(find.text('Step 2 of 7'), findsOneWidget);
+    });
+
+    testWidgets('sends the pin it was given', (tester) async {
+      await _pump(tester);
+      await _fillToReview(tester);
+      await _continue(tester);
+      await tester.tap(find.text('Submit KYC'));
+      await tester.pumpAndSettle();
+
+      final sent = api.sent!;
+      expect(sent['latitude'], isA<double>());
+      expect(sent['longitude'], isA<double>());
+    });
+
+    testWidgets('sends the address, and the account it belongs to', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await _fillToReview(tester);
+      await _continue(tester);
+      await tester.tap(find.text('Submit KYC'));
+      await tester.pumpAndSettle();
+
+      final sent = api.sent!;
+      expect(sent['addressLine1'], 'B-404 Shiv Residency');
+      expect(sent['addressLine2'], 'Paud Road, Kothrud');
+      expect(sent['pincode'], '411038');
+      expect(sent['city'], 'Pune');
+      expect(sent['state'], 'Maharashtra');
+      // Nobody picked a relation, so it stays the default rather than going
+      // up as null and losing the distinction.
+      expect(sent['accountHolderRelation'], 'self');
+      // An untouched optional document is left out, not sent empty.
+      expect(sent.containsKey('passbookUrl'), isFalse);
+      expect(sent.containsKey('landmark'), isFalse);
+    });
+
+    testWidgets('choosing "Mine" fills the holder name from the first step', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await _fillToReview(tester);
+
+      // Clear it, then pick "Mine" — the name is already known from step 1.
+      await tester.enterText(_field('Account holder name'), '');
+      await tester.tap(find.text('Mine'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextField>(_field('Account holder name'))
+            .controller!
+            .text,
+        'Tanay Deo',
+      );
+    });
+
     testWidgets('an omitted optional field is not sent as an empty string', (
       tester,
     ) async {
@@ -302,13 +428,13 @@ void main() {
       await _fillToReview(tester);
       await _continue(tester);
 
-      expect(find.text('Step 6 of 6'), findsOneWidget);
+      expect(find.text('Step 7 of 7'), findsOneWidget);
       await tester.tap(find.byType(KycReviewRow).first);
       await tester.pumpAndSettle();
 
       // Review was a wall of text with no way back short of stepping
       // backwards through the whole wizard.
-      expect(find.text('Step 1 of 6'), findsOneWidget);
+      expect(find.text('Step 1 of 7'), findsOneWidget);
     });
 
     testWidgets('survives a small screen in Hindi', (tester) async {

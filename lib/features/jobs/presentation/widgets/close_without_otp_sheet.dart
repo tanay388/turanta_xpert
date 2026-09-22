@@ -24,9 +24,7 @@ typedef CloseWithoutOtpChoice = ({String reason, String? note});
 /// as long as it lasts, so this costs a whole shift rather than one booking.
 /// The reason is required because the close is flagged for ops, not hidden
 /// from them.
-Future<CloseWithoutOtpChoice?> showCloseWithoutOtpSheet(
-  BuildContext context,
-) {
+Future<CloseWithoutOtpChoice?> showCloseWithoutOtpSheet(BuildContext context) {
   return showModalBottomSheet<CloseWithoutOtpChoice>(
     context: context,
     isScrollControlled: true,
@@ -114,7 +112,9 @@ class _CloseWithoutOtpSheetState extends ConsumerState<_CloseWithoutOtpSheet> {
               for (final (code, icon) in _reasons)
                 _ReasonChip(
                   icon: icon,
-                  label: ref.t('jobs.close_no_otp.reason.${code.toLowerCase()}'),
+                  label: ref.t(
+                    'jobs.close_no_otp.reason.${code.toLowerCase()}',
+                  ),
                   selected: _reason == code,
                   onTap: () => setState(() => _reason = code),
                 ),

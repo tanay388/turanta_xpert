@@ -9,7 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import 'otp_controller.dart';
-import 'widgets/auth_primary_button.dart';
+import 'widgets/auth_inputs.dart';
 import 'widgets/auth_shell.dart';
 import 'widgets/auth_text_link.dart';
 
@@ -113,30 +113,34 @@ class OtpVerificationScreen extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _BackButton(onTap: goBack),
-          ),
-          const SizedBox(height: XpertSpacing.lg),
           Text(
             ref.t('otp.title'),
-            style: XpertTypography.title.copyWith(fontSize: 22),
+            style: XpertTypography.title.copyWith(fontSize: 20),
           ),
           const SizedBox(height: XpertSpacing.xs),
-          // The number is the thing to check before typing, so it leads the
-          // line rather than hiding inside a sentence.
+          // The number and the way back out of it, on one line — everything
+          // else here is the six digits.
           Row(
             children: [
-              Flexible(
-                child: Text(
-                  _formatPhone(phone),
-                  style: XpertTypography.label.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+              InkWell(
+                onTap: goBack,
+                borderRadius: BorderRadius.circular(XpertRadius.pill),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    size: 20,
+                    color: XpertColors.muted,
                   ),
                 ),
               ),
               const SizedBox(width: XpertSpacing.xs),
+              Expanded(
+                child: Text(
+                  ref.t('otp.sent_to', {'phone': _formatPhone(phone)}),
+                  style: XpertTypography.caption.copyWith(fontSize: 13.5),
+                ),
+              ),
               InkWell(
                 onTap: goBack,
                 borderRadius: BorderRadius.circular(XpertRadius.sm),
@@ -148,7 +152,7 @@ class OtpVerificationScreen extends HookConsumerWidget {
                   child: Text(
                     ref.t('otp.change'),
                     style: XpertTypography.caption.copyWith(
-                      color: XpertColors.primary,
+                      color: XpertColors.primaryDeep,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -157,188 +161,42 @@ class OtpVerificationScreen extends HookConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: XpertSpacing.xl),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const maxCellSize = 48.0;
-              const minCellSize = 40.0;
-              const gap = 8.0;
-              final cellSize =
-                  ((constraints.maxWidth - gap * (_otpLength - 1)) /
-                          _otpLength)
-                      .clamp(minCellSize, maxCellSize);
-              final rowWidth = cellSize * _otpLength + gap * (_otpLength - 1);
-
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () => focusNode.requestFocus(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (var index = 0; index < _otpLength; index++) ...[
-                          if (index > 0) const SizedBox(width: gap),
-                          _OtpDigitCell(
-                            size: cellSize,
-                            digit: index < code.length ? code[index] : '',
-                            isFocused:
-                                focusNode.hasFocus && index == code.length,
-                            hasError: codeError.value != null,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Opacity(
-                    opacity: 0,
-                    child: SizedBox(
-                      width: rowWidth,
-                      height: cellSize,
-                      child: TextField(
-                        controller: hiddenController,
-                        focusNode: focusNode,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        showCursor: false,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(_otpLength),
-                        ],
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (value) {
-                          codeError.value = null;
-                          if (value.length == _otpLength) verifyCode(value);
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
+          const SizedBox(height: XpertSpacing.lg),
+          AuthCodeField(
+            length: _otpLength,
+            code: code,
+            controller: hiddenController,
+            focusNode: focusNode,
+            hasError: codeError.value != null,
+            onCompleted: () => verifyCode(hiddenController.text),
           ),
           if (codeError.value != null) ...[
-            const SizedBox(height: XpertSpacing.md),
+            const SizedBox(height: XpertSpacing.sm),
             Text(
               codeError.value!,
               textAlign: TextAlign.center,
               style: XpertTypography.caption.copyWith(
                 color: XpertColors.danger,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
-          const SizedBox(height: XpertSpacing.xl),
-          AuthPrimaryButton(
+          const SizedBox(height: XpertSpacing.lg),
+          AuthCta(
             label: ref.t('otp.verify'),
             isLoading: isBusy,
             onPressed: () => verifyCode(code),
           ),
-          const SizedBox(height: XpertSpacing.lg),
+          const SizedBox(height: XpertSpacing.md),
           Center(
             child: canResend
                 ? AuthTextLink(label: ref.t('otp.resend'), onTap: resendCode)
                 : Text(
                     ref.t('otp.resend_in', {'seconds': secondsLeft.value}),
-                    style: XpertTypography.caption.copyWith(fontSize: 14),
-                    textAlign: TextAlign.center,
+                    style: XpertTypography.caption.copyWith(fontSize: 13.5),
                   ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _OtpDigitCell extends StatelessWidget {
-  const _OtpDigitCell({
-    required this.size,
-    required this.digit,
-    required this.isFocused,
-    required this.hasError,
-  });
-
-  final double size;
-  final String digit;
-  final bool isFocused;
-  final bool hasError;
-
-  @override
-  Widget build(BuildContext context) {
-    final filled = digit.isNotEmpty;
-    final borderColor = hasError
-        ? XpertColors.danger
-        : isFocused
-        ? XpertColors.primary
-        : filled
-        ? const Color(0xFFC9D6DE)
-        : const Color(0xFFE3EAEF);
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 140),
-      curve: Curves.easeOut,
-      width: size,
-      height: size * 1.16,
-      decoration: BoxDecoration(
-        // An empty cell is a hole to fill, a filled one is done — colour says
-        // so, so the cell needs no placeholder character.
-        color: filled ? XpertColors.surface : const Color(0xFFF6F9FB),
-        borderRadius: BorderRadius.circular(XpertRadius.md),
-        border: Border.all(color: borderColor, width: isFocused ? 2 : 1.2),
-      ),
-      alignment: Alignment.center,
-      child: filled
-          ? Text(
-              digit,
-              style: XpertTypography.title.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
-            )
-          : isFocused
-          ? Container(
-              width: 2,
-              height: size * 0.42,
-              decoration: BoxDecoration(
-                color: XpertColors.primary,
-                borderRadius: BorderRadius.circular(1),
-              ),
-            )
-          : const SizedBox.shrink(),
-    );
-  }
-}
-
-/// A quiet back affordance — the flow's only way out, so it stays visible
-/// without competing with the code entry.
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFF2F6F9),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: const SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            Icons.arrow_back_rounded,
-            size: 20,
-            color: XpertColors.onSurface,
-          ),
-        ),
       ),
     );
   }

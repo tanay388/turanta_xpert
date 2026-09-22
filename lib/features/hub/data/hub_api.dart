@@ -55,7 +55,9 @@ class PartnerHub {
       id: (json['id'] as num).toInt(),
       name: (json['name'] as String?) ?? '',
       address: json['address'] as String?,
-      center: center is Map<String, dynamic> ? HubCenter.fromJson(center) : null,
+      center: center is Map<String, dynamic>
+          ? HubCenter.fromJson(center)
+          : null,
       serviceAreaGeoJson: geo is Map<String, dynamic> ? geo : null,
     );
   }
