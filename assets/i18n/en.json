@@ -606,5 +606,12 @@
   "update.available.title": "A new version is ready",
   "update.body": "This version of Turanta Xpert is no longer supported. Please update to the latest version to keep receiving jobs.",
   "update.cta": "Update now",
-  "update.title": "Update required"
+  "update.title": "Update required",
+  "location.lost_title": "Dispatch can't see you",
+  "location.denied": "Turanta needs your location to check you in and send you jobs.",
+  "location.blocked": "Location is turned off for Turanta Xpert. Open Settings and allow location to check in.",
+  "location.services_off": "Your phone's location is switched off. Turn it on to check in.",
+  "location.unavailable": "Couldn't get a location fix. Move to an open area and try again.",
+  "location.open_settings": "Open settings",
+  "location.turn_on": "Turn on location"
 }

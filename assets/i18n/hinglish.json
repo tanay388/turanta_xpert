@@ -606,5 +606,12 @@
   "update.available.title": "Naya version ready hai",
   "update.body": "Turanta Xpert ka yeh version ab supported nahi hai. Jobs milte rehne ke liye latest version par update karein.",
   "update.cta": "Abhi update karein",
-  "update.title": "Update zaroori hai"
+  "update.title": "Update zaroori hai",
+  "location.lost_title": "Dispatch ko aap dikh nahi rahe",
+  "location.denied": "Check-in aur jobs ke liye Turanta ko aapki location chahiye.",
+  "location.blocked": "Turanta Xpert ke liye location band hai. Settings mein jaake location allow karein.",
+  "location.services_off": "Aapke phone ki location band hai. Check-in ke liye ise on karein.",
+  "location.unavailable": "Location nahi mil payi. Khuli jagah par jaakar dobara try karein.",
+  "location.open_settings": "Settings kholein",
+  "location.turn_on": "Location on karein"
 }
