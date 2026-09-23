@@ -34,7 +34,6 @@ android {
 
     defaultConfig {
         applicationId = "com.turanta.turanta_xpert"
-        // Firebase Auth requires minSdk 23+
         minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

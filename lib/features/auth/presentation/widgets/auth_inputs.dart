@@ -175,6 +175,7 @@ class AuthCodeField extends StatelessWidget {
                   autofocus: true,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.oneTimeCode],
                   enableSuggestions: false,
                   autocorrect: false,
                   showCursor: false,

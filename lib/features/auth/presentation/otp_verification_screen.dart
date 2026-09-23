@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/theme/xpert_tokens.dart';
 import 'otp_controller.dart';
+import 'sms_code_autofill.dart';
 import 'widgets/auth_inputs.dart';
 import 'widgets/auth_shell.dart';
 import 'widgets/auth_text_link.dart';
@@ -90,6 +91,14 @@ class OtpVerificationScreen extends HookConsumerWidget {
       codeError.value = null;
       await controller.verify(value);
     }
+
+    useSmsCodeAutofill(
+      key: challengeId,
+      onCode: (code) {
+        hiddenController.text = code;
+        verifyCode(code);
+      },
+    );
 
     Future<void> resendCode() async {
       if (phone.isEmpty || secondsLeft.value > 0) return;
