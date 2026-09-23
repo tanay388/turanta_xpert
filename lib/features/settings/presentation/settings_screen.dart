@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../app/shell/xpert_list_group.dart';
 import '../../../app/shell/xpert_sections.dart';
+import '../../../core/auth/session_reset.dart';
 import '../../../core/i18n/app_locale.dart';
 import '../../../core/i18n/context_t.dart';
 import '../../../core/i18n/locale_provider.dart';
@@ -185,7 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _deletingAccount = true);
     try {
       await ref.read(partnerAuthApiProvider).deleteAccount();
-      await ref.read(authProvider.notifier).signOut();
+      await endSession();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/context_t.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/models/partner_break.dart';
 import '../../../../core/theme/xpert_tokens.dart';
 import '../availability_controller.dart';
@@ -34,14 +35,54 @@ class ShiftCard extends ConsumerWidget {
   Future<void> _checkIn(BuildContext context, WidgetRef ref) async {
     final blocked = await ref.read(attendanceProvider.notifier).checkIn();
     if (!context.mounted) return;
-    if (blocked != null) {
-      final msg =
-          ref.read(attendanceProvider).error ??
-          ref.t('home.check_in_outside_hours', {
-            'hours': attendance.currentShift?.shift.displayWindow ?? '—',
-          });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (blocked == null) return;
+
+    // A location block is the one refusal the partner can clear themselves,
+    // so it gets the sentence that says how rather than the generic toast.
+    final denial = ref.read(attendanceProvider).locationDenial;
+    if (blocked == CheckInBlockedReason.gps && denial != null) {
+      _showDenial(context, ref, denial);
+      return;
     }
+
+    final msg =
+        ref.read(attendanceProvider).error ??
+        ref.t('home.check_in_outside_hours', {
+          'hours': attendance.currentShift?.shift.displayWindow ?? '—',
+        });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Says what is wrong and, where the OS offers one, opens the screen that
+  /// fixes it. Without this a partner who declined the prompt once on iOS is
+  /// simply unable to check in, with nothing telling them why or where to go.
+  static void _showDenial(
+    BuildContext context,
+    WidgetRef ref,
+    LocationDenial denial,
+  ) {
+    final service = ref.read(locationServiceProvider);
+    final (String action, Future<bool> Function()? open) = switch (denial) {
+      LocationDenial.blocked => (
+        ref.t('location.open_settings'),
+        service.openSettings,
+      ),
+      LocationDenial.servicesOff => (
+        ref.t('location.turn_on'),
+        service.openDeviceLocationSettings,
+      ),
+      _ => ('', null),
+    };
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ref.t(denialMessageKey(denial))),
+        duration: const Duration(seconds: 6),
+        action: open == null
+            ? null
+            : SnackBarAction(label: action, onPressed: () => open()),
+      ),
+    );
   }
 
   Future<void> _checkOut(BuildContext context, WidgetRef ref) async {
@@ -164,6 +205,10 @@ class ShiftCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (attendance.isLocationLost) ...[
+            _LocationLostBanner(denial: attendance.locationDenial!),
+            const SizedBox(height: XpertSpacing.sm),
+          ],
           Row(
             children: [
               // Expanded and aligned, not Flexible beside a Spacer: both take
@@ -356,6 +401,81 @@ class _JobLockNote extends StatelessWidget {
 
 /// Status as one object rather than a loose dot beside loose text — it reads
 /// as a state, and it survives being glanced at from a stairwell.
+/// On shift, but dispatch cannot see where. This is the state that used to be
+/// a `debugPrint` — the partner's own screen still said CHECKED IN while they
+/// had stopped appearing to dispatch entirely.
+class _LocationLostBanner extends ConsumerWidget {
+  const _LocationLostBanner({required this.denial});
+
+  final LocationDenial denial;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.read(locationServiceProvider);
+    final (String label, Future<bool> Function()? open) = switch (denial) {
+      LocationDenial.blocked => (
+        ref.t('location.open_settings'),
+        service.openSettings,
+      ),
+      LocationDenial.servicesOff => (
+        ref.t('location.turn_on'),
+        service.openDeviceLocationSettings,
+      ),
+      _ => ('', null),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(XpertSpacing.sm),
+      decoration: BoxDecoration(
+        color: XpertColors.danger.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: XpertColors.danger.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.location_off_rounded,
+            size: 18,
+            color: XpertColors.danger,
+          ),
+          const SizedBox(width: XpertSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ref.t('location.lost_title'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: XpertColors.danger,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  ref.t(denialMessageKey(denial)),
+                  style: const TextStyle(fontSize: 12, height: 1.3),
+                ),
+                if (open != null)
+                  TextButton(
+                    onPressed: () => open(),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(label),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.color, required this.label});
 

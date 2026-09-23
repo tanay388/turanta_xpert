@@ -9,6 +9,7 @@ import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
 import 'package:turanta_xpert/core/models/partner_user.dart';
+import 'package:turanta_xpert/core/network/dio_client.dart';
 import 'package:turanta_xpert/features/auth/data/partner_auth_api.dart';
 import 'package:turanta_xpert/features/auth/presentation/pending_approval_screen.dart';
 import 'package:turanta_xpert/features/kyc/presentation/kyc_wizard_screen.dart';
@@ -79,6 +80,8 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // No backend here: an unstubbed call fails at once instead of waiting.
+        dioProvider.overrideWithValue(Dio()),
         translationsProvider.overrideWith((_) async => translations!),
         localeProvider.overrideWith(_FakeLocale.new),
         partnerAuthApiProvider.overrideWith((_) => api),

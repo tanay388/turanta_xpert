@@ -1,12 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../core/auth/token_store.dart';
 import '../core/i18n/context_t.dart';
 import '../core/models/partner_user.dart';
-import '../core/network/dio_client.dart';
 import '../core/theme/xpert_tokens.dart';
 import '../features/auth/presentation/auth_controller.dart';
 
@@ -20,11 +19,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   String? _error;
 
-  // The backend bootstrap call failed, so there is no [Session]/profile to
-  // read a phone from — this falls back to the raw Firebase identity so a
-  // partner stuck on a role conflict can see which number is signed in.
-  String? get _signedInPhone =>
-      fb.FirebaseAuth.instance.currentUser?.phoneNumber;
+  String? _signedInPhone;
 
   @override
   void initState() {
@@ -40,6 +35,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<void> _boot() async {
     setState(() => _error = null);
+    // The bootstrap may fail before any profile loads; the stored session
+    // still says which number is signed in.
+    final phone = (await TokenStore.instance.read())?.phone;
+    if (mounted) setState(() => _signedInPhone = phone);
     try {
       await ref.read(authProvider.notifier).bootstrap();
       if (!mounted) return;
@@ -61,14 +60,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   /// A partner cannot act on "DioException [connection timeout]". They can act
-  /// on a bad connection, and the two ways of not getting through — the server
-  /// never answering and the sign-in never being confirmed — are worth saying
-  /// apart, because only one of them means the phone is offline.
+  /// on a bad connection.
   String _messageFor(Object error) {
     if (error is ApiException) {
       return switch (error.kind) {
         ApiFailure.network => ref.t('splash.offline'),
-        ApiFailure.signIn => ref.t('splash.signin_timeout'),
         ApiFailure.server => error.message,
       };
     }
@@ -80,9 +76,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       DioExceptionType.unknown,
     };
     if (error is DioException && offline.contains(error.type)) {
-      return error.error == idTokenTimeoutMarker
-          ? ref.t('splash.signin_timeout')
-          : ref.t('splash.offline');
+      return ref.t('splash.offline');
     }
     return error.toString();
   }

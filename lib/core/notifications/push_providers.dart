@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../auth/token_store.dart';
 import '../network/dio_client.dart';
 import 'pending_deep_link.dart';
 import 'push_notification_service.dart';
@@ -14,8 +14,7 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) 
     registerToken: (token) async {
       deviceInfo.setNotificationToken(token);
 
-      // Only hit the API when Firebase Auth has a session.
-      if (FirebaseAuth.instance.currentUser == null) return;
+      if (await TokenStore.instance.read() == null) return;
 
       await dio.post<Map<String, dynamic>>(
         '/user/firebase-token',

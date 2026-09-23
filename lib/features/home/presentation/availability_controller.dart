@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/location/location_service.dart';
 import '../../jobs/presentation/jobs_controller.dart';
 import '../data/attendance_api.dart';
 
@@ -64,6 +65,7 @@ class AttendanceState {
     this.breakSummary,
     this.loading = false,
     this.error,
+    this.locationDenial,
   });
 
   final AttendanceSnapshot? snapshot;
@@ -71,6 +73,16 @@ class AttendanceState {
   final Map<String, dynamic>? breakSummary;
   final bool loading;
   final String? error;
+
+  /// Why the last attempt at a fix failed, or null if the last one worked.
+  /// Held as the reason rather than a sentence because the controller has no
+  /// translator — and the sentence it used to hardcode was English-only and
+  /// wrong for three of its four causes.
+  final LocationDenial? locationDenial;
+
+  /// On shift but unable to report where. Dispatch cannot see this partner,
+  /// and nothing else on the card says so.
+  bool get isLocationLost => isCheckedIn && locationDenial != null;
 
   bool get isCheckedIn => snapshot?.isCheckedIn ?? false;
   bool get isOnBreak => snapshot?.isOnBreak ?? false;
@@ -121,6 +133,8 @@ class AttendanceState {
     bool? loading,
     String? error,
     bool clearError = false,
+    LocationDenial? locationDenial,
+    bool clearLocationDenial = false,
   }) {
     return AttendanceState(
       snapshot: snapshot ?? this.snapshot,
@@ -128,6 +142,9 @@ class AttendanceState {
       breakSummary: breakSummary ?? this.breakSummary,
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
+      locationDenial: clearLocationDenial
+          ? null
+          : (locationDenial ?? this.locationDenial),
     );
   }
 }
@@ -171,6 +188,9 @@ class AttendanceController extends Notifier<AttendanceState> {
         currentShift: shift,
         breakSummary: breakSummary,
         loading: false,
+        // Refreshing the shift says nothing about location; dropping this
+        // would clear a live "we cannot see you" every time the tab polls.
+        locationDenial: state.locationDenial,
       );
       _syncPingLoop(snap);
     } catch (e) {
@@ -200,23 +220,25 @@ class AttendanceController extends Notifier<AttendanceState> {
     );
   }
 
+  /// Re-reads permission without asking for a position, to settle whether a
+  /// stream error was a lost permission or a passing glitch.
+  Future<void> _recheckLocation() async {
+    final fix = await ref
+        .read(locationServiceProvider)
+        .locate(timeLimit: const Duration(seconds: 5));
+    state = fix.position != null
+        ? state.copyWith(clearLocationDenial: true)
+        : state.copyWith(locationDenial: fix.denial);
+  }
+
+  /// Takes a fix and records why it failed, so the card can say something
+  /// the partner can act on. Clears a stale denial on success.
   Future<Position?> _position() async {
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return null;
-    }
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) return null;
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 15),
-      ),
-    );
+    final fix = await ref.read(locationServiceProvider).locate();
+    state = fix.position != null
+        ? state.copyWith(clearLocationDenial: true)
+        : state.copyWith(locationDenial: fix.denial);
+    return fix.position;
   }
 
   /// What the OS says about us right now, rather than a hopeful constant.
@@ -249,10 +271,9 @@ class AttendanceController extends Notifier<AttendanceState> {
     try {
       final pos = await _position();
       if (pos == null) {
-        state = state.copyWith(
-          loading: false,
-          error: 'Location permission required',
-        );
+        // The reason is already on the state; the card turns it into a
+        // sentence and, where one exists, a way out.
+        state = state.copyWith(loading: false);
         return CheckInBlockedReason.gps;
       }
       await _api.checkIn(
@@ -350,7 +371,13 @@ class AttendanceController extends Notifier<AttendanceState> {
           locationSettings: _shiftLocationSettings(interval),
         ).listen(
           (position) => unawaited(_sendPing(position: position)),
-          onError: (Object err) => debugPrint('shift location stream: $err'),
+          onError: (Object err) {
+            debugPrint('shift location stream: $err');
+            // Permission revoked mid-shift lands here. Logging it and
+            // carrying on is how a partner stays "on shift" on their own
+            // screen while dispatch has stopped seeing them.
+            unawaited(_recheckLocation());
+          },
         );
     unawaited(_sendPing());
   }
@@ -394,6 +421,12 @@ class AttendanceController extends Notifier<AttendanceState> {
     final sessionId = snap?.sessionId;
     if (snap == null || !snap.isCheckedIn || sessionId == null) return;
     try {
+      // A position straight off the stream never goes through _position(),
+      // so it has to clear the denial itself or a recovered partner stays
+      // flagged as lost.
+      if (position != null && state.locationDenial != null) {
+        state = state.copyWith(clearLocationDenial: true);
+      }
       final pos = position ?? await _position();
       if (pos == null) return;
       final updated = await _api.ping(

@@ -11,6 +11,7 @@ import '../../sos/presentation/sos_prompt.dart';
 
 import '../../../app/shell/xpert_sections.dart';
 import '../../../core/i18n/context_t.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/notifications/push_notification_service.dart';
 import '../../../core/notifications/push_providers.dart';
 import '../../../core/theme/xpert_tokens.dart';
@@ -80,27 +81,11 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     }
   }
 
-  Future<Position?> _currentPosition() async {
-    try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return null;
-      }
-      if (!await Geolocator.isLocationServiceEnabled()) return null;
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Shorter than a check-in's: this only feeds the distance warning below,
+  /// and the partner is standing at a door waiting to start.
+  Future<Position?> _currentPosition() => ref
+      .read(locationServiceProvider)
+      .current(timeLimit: const Duration(seconds: 8));
 
   /// How far from the customer's door a partner can be before starting the job
   /// is worth questioning. Below this, ordinary GPS scatter accounts for the
