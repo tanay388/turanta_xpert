@@ -7,6 +7,7 @@ import 'package:turanta_xpert/app/theme.dart';
 import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
+import 'package:turanta_xpert/core/network/dio_client.dart';
 import 'package:turanta_xpert/core/notifications/push_notification_service.dart';
 import 'package:turanta_xpert/core/notifications/push_providers.dart';
 import 'package:turanta_xpert/features/jobs/data/jobs_api.dart';
@@ -74,6 +75,8 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // No backend here: an unstubbed call fails at once instead of waiting.
+        dioProvider.overrideWithValue(Dio()),
         translationsProvider.overrideWith((_) async => translations!),
         localeProvider.overrideWith(_FakeLocale.new),
         jobsApiProvider.overrideWith((_) => _FakeJobsApi()),

@@ -1,12 +1,76 @@
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/auth/token_store.dart';
 import '../../../core/models/partner_user.dart';
 import '../../../core/network/dio_client.dart';
+
+class OtpChallenge {
+  const OtpChallenge({required this.id, required this.resendAfter});
+
+  factory OtpChallenge.fromJson(Map<String, dynamic> json) => OtpChallenge(
+    id: json['challengeId'] as String,
+    resendAfter: Duration(seconds: json['resendAfterSeconds'] as int),
+  );
+
+  final String id;
+  final Duration resendAfter;
+}
 
 class PartnerAuthApi {
   PartnerAuthApi(this._dio);
   final Dio _dio;
+
+  /// `POST /auth/otp/send` — texts a 6-digit code valid for 10 minutes.
+  Future<OtpChallenge> sendOtp(String phone) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/otp/send',
+        data: {'phone': phone, 'client': 'partner'},
+      );
+      return OtpChallenge.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw _mapDio(e);
+    }
+  }
+
+  /// `POST /auth/otp/verify` — exchanges the code for a session.
+  Future<AuthTokens> verifyOtp({
+    required String challengeId,
+    required String code,
+    required String phone,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/otp/verify',
+        data: {'challengeId': challengeId, 'code': code},
+      );
+      final data = res.data!;
+      return AuthTokens(
+        accessToken: data['accessToken'] as String,
+        refreshToken: data['refreshToken'] as String,
+        accessExpiresAt: DateTime.now().add(
+          Duration(seconds: data['expiresIn'] as int),
+        ),
+        userId: data['userId'] as String,
+        phone: phone,
+      );
+    } on DioException catch (e) {
+      throw _mapDio(e);
+    }
+  }
+
+  /// `POST /user/logout` — ends this session and stops pushes to this device.
+  /// The device headers already carry the push token and device id.
+  Future<void> logout() async {
+    await _dio.post<void>(
+      '/user/logout',
+      options: Options(
+        sendTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ),
+    );
+  }
 
   Future<PartnerUser> getMe({String? referralCode}) async {
     try {
@@ -209,13 +273,6 @@ class PartnerAuthApi {
             'API returned HTML instead of JSON. Check that NestJS is on '
             '${e.requestOptions.uri.origin} (not Vite/admin).',
         statusCode: e.response?.statusCode,
-      );
-    }
-
-    if (e.error == idTokenTimeoutMarker) {
-      return ApiException(
-        message: 'Firebase did not return an ID token in time.',
-        kind: ApiFailure.signIn,
       );
     }
 

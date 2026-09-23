@@ -265,9 +265,6 @@ enum ApiFailure {
   /// The request never got an answer: no network, or one too slow to wait for.
   network,
 
-  /// Firebase never handed over an ID token, so nothing was sent at all.
-  signIn,
-
   /// The server answered, and said no.
   server,
 }

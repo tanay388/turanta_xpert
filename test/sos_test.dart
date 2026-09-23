@@ -1,9 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
+import 'package:turanta_xpert/core/network/dio_client.dart';
 import 'package:turanta_xpert/features/home/presentation/widgets/home_header.dart';
 import 'package:turanta_xpert/features/sos/data/sos_api.dart';
 import 'package:turanta_xpert/features/sos/presentation/sos_controller.dart';
@@ -38,6 +40,8 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // No backend here: an unstubbed call fails at once instead of waiting.
+        dioProvider.overrideWithValue(Dio()),
         translationsProvider.overrideWith((_) async => translations!),
         localeProvider.overrideWith(_FakeLocale.new),
         sosProvider.overrideWith(() => _FakeSos(sos)),

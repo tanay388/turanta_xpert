@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import 'package:turanta_xpert/app/theme.dart';
 import 'package:turanta_xpert/core/i18n/app_locale.dart';
 import 'package:turanta_xpert/core/i18n/locale_provider.dart';
 import 'package:turanta_xpert/core/i18n/localization_service.dart';
+import 'package:turanta_xpert/core/network/dio_client.dart';
 import 'package:turanta_xpert/features/auth/presentation/login_screen.dart';
 import 'package:turanta_xpert/features/auth/presentation/widgets/auth_shell.dart';
 
@@ -58,6 +60,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // No backend here: an unstubbed call fails at once instead of waiting.
+          dioProvider.overrideWithValue(Dio()),
           translationsProvider.overrideWith((_) async => translations!),
         ],
         child: MaterialApp.router(

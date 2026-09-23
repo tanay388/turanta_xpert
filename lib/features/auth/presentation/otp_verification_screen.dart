@@ -14,7 +14,6 @@ import 'widgets/auth_shell.dart';
 import 'widgets/auth_text_link.dart';
 
 const _otpLength = 6;
-const _resendCooldownSeconds = 60;
 
 class OtpVerificationScreen extends HookConsumerWidget {
   const OtpVerificationScreen({super.key});
@@ -27,18 +26,16 @@ class OtpVerificationScreen extends HookConsumerWidget {
     final focusNode = useFocusNode();
     final hiddenController = useTextEditingController();
     final codeError = useState<String?>(null);
-    final secondsLeft = useState(_resendCooldownSeconds);
+    final secondsLeft = useState(0);
     final timerRef = useRef<Timer?>(null);
+    final lastSent = useRef<OtpCodeSent?>(null);
 
     useListenable(hiddenController);
     useListenable(focusNode);
 
-    final phone = switch (state) {
-      OtpCodeSent(:final phone) => phone,
-      OtpVerifying(:final phone) => phone,
-      OtpVerifyFailed(:final phone) => phone,
-      _ => '',
-    };
+    if (state is OtpCodeSent) lastSent.value = state;
+    final phone = lastSent.value?.phone ?? '';
+    final challengeId = lastSent.value?.challengeId;
 
     final isBusy = state is OtpVerifying;
     final code = hiddenController.text;
@@ -65,7 +62,7 @@ class OtpVerificationScreen extends HookConsumerWidget {
 
     useEffect(() {
       timerRef.value?.cancel();
-      secondsLeft.value = _resendCooldownSeconds;
+      secondsLeft.value = lastSent.value?.resendAfter.inSeconds ?? 0;
       timerRef.value = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (secondsLeft.value <= 1) {
           timer.cancel();
@@ -75,7 +72,7 @@ class OtpVerificationScreen extends HookConsumerWidget {
         }
       });
       return () => timerRef.value?.cancel();
-    }, [phone]);
+    }, [challengeId]);
 
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,7 +86,7 @@ class OtpVerificationScreen extends HookConsumerWidget {
         codeError.value = ref.t('otp.incomplete');
         return;
       }
-      if (state is! OtpCodeSent && state is! OtpVerifyFailed) return;
+      if (state is! OtpCodeSent) return;
       codeError.value = null;
       await controller.verify(value);
     }

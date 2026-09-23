@@ -11,6 +11,7 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'app/app.dart';
+import 'core/auth/session_reset.dart';
 import 'core/notifications/fcm_background.dart';
 import 'firebase_options.dart';
 
@@ -94,6 +95,14 @@ Future<void> main() async {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     }
     _configureCrashReporting();
-    runApp(const ProviderScope(child: TurantaXpertApp()));
+    runApp(
+      ValueListenableBuilder<int>(
+        valueListenable: sessionGeneration,
+        builder: (_, generation, _) => ProviderScope(
+          key: ValueKey(generation),
+          child: const TurantaXpertApp(),
+        ),
+      ),
+    );
   }, _reportUncaughtError);
 }

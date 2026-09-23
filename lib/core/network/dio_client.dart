@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:talker/talker.dart';
@@ -9,6 +8,8 @@ import 'package:talker_dio_logger/talker_dio_logger.dart';
 import 'retry_interceptor.dart';
 import 'crash_reporting_interceptor.dart';
 
+import '../auth/session_reset.dart';
+import '../auth/token_store.dart';
 import '../config/keys.dart';
 import '../device/device_info_service.dart';
 
@@ -45,52 +46,34 @@ TalkerDioLogger createHttpLogger() {
   );
 }
 
-/// How long the app waits for Firebase to hand over an ID token, and for the
-/// device to describe itself, before giving up on a request.
-///
-/// Neither call has a deadline of its own, and both run before anything is
-/// sent — so without these a stalled token fetch hangs every request in the
-/// app with nothing in the logs to say so.
-const authTokenTimeout = Duration(seconds: 12);
 const deviceHeadersTimeout = Duration(seconds: 5);
 
-/// Marks a request that was never sent because Firebase did not hand over a
-/// token, so a screen can say that rather than blaming the network.
-const idTokenTimeoutMarker = 'firebase-id-token-timeout';
-
-/// The ID token, or a [TimeoutException] rather than a wait with no end.
-Future<String?> idTokenOrTimeout(
-  Future<String?> Function() fetch, {
-  Duration timeout = authTokenTimeout,
-}) => fetch().timeout(timeout);
-
-class FirebaseAuthInterceptor extends Interceptor {
-  FirebaseAuthInterceptor(this._auth);
-  final FirebaseAuth _auth;
+/// Attaches the access token, refreshing it shortly before it expires and
+/// once on a 401. Parallel requests share one refresh.
+class AuthInterceptor extends Interceptor {
+  AuthInterceptor(this._dio, this._tokens);
+  final Dio _dio;
+  final TokenStore _tokens;
+  late final Dio _refreshDio = Dio(
+    BaseOptions(
+      baseUrl: _dio.options.baseUrl,
+      connectTimeout: _dio.options.connectTimeout,
+      receiveTimeout: _dio.options.receiveTimeout,
+    ),
+  );
+  Future<AuthTokens?>? _refreshing;
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      final String? token;
-      try {
-        token = await idTokenOrTimeout(() => user.getIdToken());
-      } on TimeoutException {
-        // Sending it unsigned would come back 401 and read as "signed out".
-        return handler.reject(
-          DioException.connectionTimeout(
-            timeout: authTokenTimeout,
-            requestOptions: options,
-            error: idTokenTimeoutMarker,
-          ),
-        );
-      }
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
+    var tokens = await _tokens.read();
+    if (tokens != null && tokens.expiresSoon) {
+      tokens = await _refresh() ?? await _tokens.read();
+    }
+    if (tokens != null) {
+      options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
     }
     handler.next(options);
   }
@@ -101,22 +84,39 @@ class FirebaseAuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     if (err.response?.statusCode != 401 ||
-        err.requestOptions.extra['_retried'] == true) {
+        err.requestOptions.extra['_retried'] == true ||
+        await _tokens.read() == null) {
       return handler.next(err);
     }
-    final user = _auth.currentUser;
-    if (user == null) return handler.next(err);
-
+    final tokens = await _refresh();
+    if (tokens == null) return handler.next(err);
     try {
-      final token = await idTokenOrTimeout(() => user.getIdToken(true));
-      final retried = err.requestOptions
-        ..headers['Authorization'] = 'Bearer $token'
-        ..extra['_retried'] = true;
-      final dio = Dio(BaseOptions(baseUrl: retried.baseUrl));
-      final response = await dio.fetch(retried);
-      return handler.resolve(response);
-    } catch (_) {
-      return handler.next(err);
+      final retried = err.requestOptions..extra['_retried'] = true;
+      return handler.resolve(await _dio.fetch(retried));
+    } on DioException catch (e) {
+      return handler.next(e);
+    }
+  }
+
+  Future<AuthTokens?> _refresh() =>
+      _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  /// Only the server saying the session is over signs the partner out; a
+  /// timeout or a 5xx keeps the session for the next attempt.
+  Future<AuthTokens?> _doRefresh() async {
+    final current = await _tokens.read();
+    if (current == null) return null;
+    try {
+      final res = await _refreshDio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {'refreshToken': current.refreshToken},
+      );
+      final next = current.rotated(res.data!);
+      await _tokens.save(next);
+      return next;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) await endSession();
+      return null;
     }
   }
 }
@@ -158,7 +158,7 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
   dio.interceptors.add(DeviceHeadersInterceptor(deviceInfo));
-  dio.interceptors.add(FirebaseAuthInterceptor(FirebaseAuth.instance));
+  dio.interceptors.add(AuthInterceptor(dio, TokenStore.instance));
   dio.interceptors.add(RetryInterceptor());
   dio.interceptors.add(CrashReportingInterceptor());
   dio.interceptors.add(createHttpLogger());
