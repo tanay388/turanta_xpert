@@ -76,6 +76,9 @@ class LoginScreen extends HookConsumerWidget {
       if (rejection == null) return null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
+        // Also inline: AuthShell does not resize for the keyboard, which the
+        // autofocused field raises over the snackbar.
+        phoneError.value = ref.t(rejection);
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
@@ -83,7 +86,7 @@ class LoginScreen extends HookConsumerWidget {
               backgroundColor: XpertColors.danger,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 6),
-              content: Text('$rejection\n${ref.t('login.rejected.hint')}'),
+              content: Text(ref.t(rejection)),
             ),
           );
         ref.read(authRejectionProvider.notifier).state = null;

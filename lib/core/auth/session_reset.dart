@@ -3,13 +3,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'token_store.dart';
 
-/// Bumped on every sign-out. The app's `ProviderScope` is keyed on it, so
-/// every provider and controller is thrown away with the old partner's data.
-final sessionGeneration = ValueNotifier<int>(0);
+/// One signed-in lifetime of the app. The root `ProviderScope` is keyed on
+/// [generation], so every sign-out throws away each provider and controller
+/// along with the old partner's data.
+///
+/// [endReason] travels with the epoch rather than through a provider: the
+/// outgoing scope keeps running for a frame after the reset and would
+/// otherwise consume the message on a screen that is about to disappear.
+class SessionEpoch {
+  const SessionEpoch(this.generation, [this.endReason]);
+  final int generation;
 
-/// Why the last session was torn down, for the login screen of the fresh
-/// scope to show once.
-String? pendingSessionEndReason;
+  /// i18n key explaining why the last session ended, or null.
+  final String? endReason;
+}
+
+final sessionEpoch = ValueNotifier(const SessionEpoch(0));
 
 /// Preferences that belong to the device rather than to whoever signed in.
 /// The device id must survive: the backend binds a partner to it.
@@ -20,7 +29,6 @@ bool _isDevicePreference(String key) =>
     key.startsWith('update_snoozed_until_');
 
 Future<void> endSession({String? reason}) async {
-  pendingSessionEndReason = reason;
   await TokenStore.instance.clear();
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -30,5 +38,5 @@ Future<void> endSession({String? reason}) async {
   } catch (_) {
     // A preference that could not be removed must not keep the user signed in.
   }
-  sessionGeneration.value++;
+  sessionEpoch.value = SessionEpoch(sessionEpoch.value.generation + 1, reason);
 }

@@ -20,15 +20,16 @@ final pendingReferralCodeProvider = StateProvider<String?>((ref) => null);
 /// feel broken. Cleared by whoever shows it.
 final referralNoticeProvider = StateProvider<PartnerUser?>((ref) => null);
 
-/// Why a signed-in number was rejected by the backend — a customer number
-/// used on Xpert, or an account bound to another handset. The session is torn
-/// down immediately in both cases, so this is the only surviving trace; the
-/// login screen shows it once and clears it.
-final authRejectionProvider = StateProvider<String?>((ref) {
-  final reason = pendingSessionEndReason;
-  pendingSessionEndReason = null;
-  return reason;
-});
+/// i18n key for why the backend turned a signed-in number away — a customer
+/// number used on Xpert, or an account bound to another handset. The session
+/// is torn down at once, so the fresh scope is seeded with it (see
+/// `SessionEpoch`) and the login screen shows it once, then clears it.
+final authRejectionProvider = StateProvider<String?>((ref) => null);
+
+const _rejectionKeys = {
+  'ROLE_CONFLICT': 'login.rejected.role',
+  'DEVICE_MISMATCH': 'login.rejected.device',
+};
 
 class Session {
   const Session({required this.userId, required this.phone, this.profile});
@@ -110,9 +111,10 @@ class AuthController extends AsyncNotifier<Session?> {
     } on ApiException catch (e) {
       // Neither is recoverable by retrying, and both used to strand the user on
       // a screen with no way back to login. Drop the session instead.
-      if (e.code == 'ROLE_CONFLICT' || e.code == 'DEVICE_MISMATCH') {
+      final rejection = _rejectionKeys[e.code];
+      if (rejection != null) {
         await ref.read(partnerAuthApiProvider).logout().catchError((_) {});
-        await endSession(reason: e.message);
+        await endSession(reason: rejection);
         return null;
       }
       if (e.statusCode == 401) {

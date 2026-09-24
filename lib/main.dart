@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'app/app.dart';
 import 'core/auth/session_reset.dart';
+import 'features/auth/presentation/auth_controller.dart';
 import 'core/notifications/fcm_background.dart';
 import 'firebase_options.dart';
 
@@ -96,10 +97,13 @@ Future<void> main() async {
     }
     _configureCrashReporting();
     runApp(
-      ValueListenableBuilder<int>(
-        valueListenable: sessionGeneration,
-        builder: (_, generation, _) => ProviderScope(
-          key: ValueKey(generation),
+      ValueListenableBuilder<SessionEpoch>(
+        valueListenable: sessionEpoch,
+        builder: (_, epoch, _) => ProviderScope(
+          key: ValueKey(epoch.generation),
+          overrides: [
+            authRejectionProvider.overrideWith((ref) => epoch.endReason),
+          ],
           child: const TurantaXpertApp(),
         ),
       ),
