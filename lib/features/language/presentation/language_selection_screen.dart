@@ -218,7 +218,7 @@ class _LanguageSelectionScreenState
   }
 }
 
-class _LanguageCard extends ConsumerWidget {
+class _LanguageCard extends StatelessWidget {
   const _LanguageCard({
     required this.locale,
     required this.selected,
@@ -232,11 +232,10 @@ class _LanguageCard extends ConsumerWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // The language's name in whatever language the app is currently showing.
-    // Repeating it under an identical native name would just look broken.
-    final inCurrentLanguage = ref.t('language.name.${locale.code}');
-    final showsSecondary = inCurrentLanguage != locale.labelNative;
+  Widget build(BuildContext context) {
+    // Fixed English, never the current UI language: a partner who can't read
+    // the previewed script still has to find their way back to English.
+    final showsSecondary = locale.labelEn != locale.labelNative;
 
     return Semantics(
       button: true,
@@ -284,7 +283,7 @@ class _LanguageCard extends ConsumerWidget {
                       if (showsSecondary) ...[
                         const SizedBox(height: 2),
                         Text(
-                          inCurrentLanguage,
+                          locale.labelEn,
                           style: XpertTypography.caption.copyWith(
                             fontSize: 12.5,
                           ),

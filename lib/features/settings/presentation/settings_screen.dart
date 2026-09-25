@@ -98,10 +98,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         : FontWeight.w600,
                   ),
                 ),
-                subtitle: Text(
-                  locale.labelEn,
-                  style: XpertTypography.caption.copyWith(fontSize: 12),
-                ),
+                subtitle: locale.labelEn == locale.labelNative
+                    ? null
+                    : Text(
+                        locale.labelEn,
+                        style: XpertTypography.caption.copyWith(fontSize: 12),
+                      ),
                 // Which one is on was previously not shown at all.
                 trailing: locale == current
                     ? const Icon(

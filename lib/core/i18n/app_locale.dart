@@ -1,8 +1,10 @@
 enum AppLocale {
   en('en', 'English', 'English'),
-  hinglish('hinglish', 'Hinglish', 'Hinglish'),
+  hinglish('hinglish', 'Hindi in English letters', 'Hinglish'),
   hi('hi', 'Hindi', 'हिन्दी'),
-  mr('mr', 'Marathi', 'मराठी');
+  mr('mr', 'Marathi', 'मराठी'),
+  kn('kn', 'Kannada', 'ಕನ್ನಡ'),
+  ta('ta', 'Tamil', 'தமிழ்');
 
   const AppLocale(this.code, this.labelEn, this.labelNative);
   final String code;
